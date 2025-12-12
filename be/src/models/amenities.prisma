@@ -1,0 +1,10 @@
+model amenities {
+  id              String            @id @db.VarChar(50)
+  name            String            @db.VarChar(100)
+  scope_id        String?           @db.VarChar(50)
+  amenity_scopes  amenity_scopes?   @relation(fields: [scope_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "amenities_ibfk_1")
+  hotel_amenities hotel_amenities[]
+  room_amenities  room_amenities[]
+
+  @@index([scope_id], map: "scope_id")
+}

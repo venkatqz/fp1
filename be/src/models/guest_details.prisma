@@ -1,0 +1,6 @@
+model guest_details {
+  id       String     @id @db.VarChar(50)
+  name     String     @db.VarChar(100)
+  phone    String?    @db.VarChar(20)
+  bookings bookings[]
+}

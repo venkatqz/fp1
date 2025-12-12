@@ -1,0 +1,15 @@
+model hotels {
+  id              String            @id @db.VarChar(50)
+  name            String            @db.VarChar(100)
+  city            String            @db.VarChar(50)
+  address         String            @db.Text
+  description     String?           @db.Text
+  rating          Decimal?          @default(0.0) @db.Decimal(3, 1)
+  lowest_price    Decimal?          @db.Decimal(10, 2)
+  images          String?           @db.Text
+  bookings        bookings[]
+  hotel_amenities hotel_amenities[]
+  hotel_managers  hotel_managers[]
+  reviews         reviews[]
+  room_types      room_types[]
+}

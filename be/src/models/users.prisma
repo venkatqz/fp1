@@ -1,0 +1,16 @@
+model users {
+  id             String           @id @db.VarChar(50)
+  name           String           @db.VarChar(100)
+  email          String           @unique(map: "email") @db.VarChar(100)
+  password_hash  String           @db.VarChar(255)
+  phone          String?          @db.VarChar(20)
+  role_id        String?          @db.VarChar(50)
+  refresh_token  String?          @db.VarChar(500)
+  access_token   String?          @db.VarChar(500)
+  bookings       bookings[]
+  hotel_managers hotel_managers[]
+  reviews        reviews[]
+  roles          roles?           @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_ibfk_1")
+
+  @@index([role_id], map: "role_id")
+}

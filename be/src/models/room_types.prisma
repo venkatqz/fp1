@@ -1,0 +1,14 @@
+model room_types {
+  id              String           @id @db.VarChar(50)
+  hotel_id        String?          @db.VarChar(50)
+  name            String           @db.VarChar(100)
+  price           Decimal          @db.Decimal(10, 2)
+  capacity        Int
+  total_inventory Int
+  images          String?          @db.Text
+  bookings        bookings[]
+  room_amenities  room_amenities[]
+  hotels          hotels?          @relation(fields: [hotel_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "room_types_ibfk_1")
+
+  @@index([hotel_id], map: "hotel_id")
+}

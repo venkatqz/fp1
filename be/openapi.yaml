@@ -1,0 +1,554 @@
+openapi: 3.0.0
+info:
+  title: Internship API (TypeScript)
+  version: 1.0.0
+  description: Typed API documentation for Hotel Booking System
+servers:
+  - url: http://localhost:3000
+    description: Local Development Server
+
+paths:
+  # --- Authentication ---
+  /auth/register:
+    post:
+      summary: Register a new user
+      operationId: registerUser
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, role]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string }
+                role: { $ref: '#/components/schemas/UserRole' }
+                phone: { type: string }
+      responses:
+        201:
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/User'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      summary: Login and get JWT token
+      operationId: loginUser
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        200:
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      token: { type: string }
+                      user: { $ref: '#/components/schemas/User' }
+        401:
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # --- Hotels ---
+  /hotels:
+    get:
+      summary: Search and List Hotels
+      operationId: searchHotels
+      description: |
+        Search for hotels with filtering options. Returns a paginated list of lightweight hotel objects.
+      tags: [Hotels]
+      parameters:
+        - in: query
+          name: query
+          schema: { type: string }
+          description: Generic search term (name, city, etc.)
+        - in: query
+          name: city
+          schema: { type: string }
+          description: Filter by location
+        - in: query
+          name: checkIn
+          schema: { type: string, format: date }
+          description: Check-in date (YYYY-MM-DD)
+        - in: query
+          name: checkOut
+          schema: { type: string, format: date }
+          description: Check-out date (YYYY-MM-DD)
+        - in: query
+          name: guests
+          schema: { type: integer, minimum: 1 }
+          description: Number of guests
+        - in: query
+          name: sortBy
+          schema: { type: string, enum: ['price_low', 'price_high', 'rating'] }
+        - in: query
+          name: minPrice
+          schema: { type: number }
+        - in: query
+          name: maxPrice
+          schema: { type: number }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+      responses:
+        200:
+          description: List of hotels found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string }
+                            name: { type: string }
+                            city: { type: string }
+                            lowestPrice: { type: number }
+                            images: { type: array, items: { type: string } }
+                            rating: { type: number }
+                      meta:
+                        type: object
+                        properties:
+                          total: { type: integer }
+                          page: { type: integer }
+                          limit: { type: integer }
+        500:
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Add a new Hotel (Admin/Manager only)
+      operationId: addHotel
+      tags: [Hotels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Hotel'
+      responses:
+        201:
+          description: Hotel created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Hotel'
+
+  /hotels/{id}:
+    get:
+      summary: Get Hotel Details with Room Types
+      operationId: getHotelById
+      description: Returns full hotel details along with embedded room types and their availability.
+      tags: [Hotels]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Hotel details with rooms
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Hotel'
+                      - type: object
+                        properties:
+                          rooms:
+                            type: array
+                            items:
+                              allOf:
+                                - $ref: '#/components/schemas/RoomType'
+                                - type: object
+                                  properties:
+                                    available:
+                                      type: integer
+                                      description: Calculated availability for the dates
+        404:
+          description: Hotel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # --- Rooms ---
+  /hotels/{id}/rooms:
+    get:
+      summary: Get available rooms for a hotel
+      operationId: getHotelRooms
+      tags: [Hotels]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoomType'
+
+  # --- Bookings ---
+  /bookings/intent:
+    post:
+      summary: Step 1 - Calculate Price & Initiate Payment
+      operationId: createBookingIntent
+      description: |
+        Calculates total price based on formatting, checks availability/inventory reduction, 
+        and returns a Stripe Payment Intent client secret.
+      tags: [Bookings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hotelId, roomTypeId, checkIn, checkOut, guests]
+              properties:
+                hotelId: { type: string }
+                roomTypeId: { type: string }
+                checkIn: { type: string, format: date }
+                checkOut: { type: string, format: date }
+                guests: { type: integer }
+      responses:
+        200:
+          description: Payment Intent Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      paymentIntentId: { type: string }
+                      clientSecret: { type: string }
+                      totalPrice: { type: number }
+                      currency: { type: string, example: "INR" }
+        400:
+          description: Validation error or room not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bookings/confirm:
+    post:
+      summary: Step 2 - Finalize Booking
+      operationId: confirmBooking
+      description: Called after successful payment on the client side to persist the booking in the DB.
+      tags: [Bookings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentIntentId]
+              properties:
+                paymentIntentId: { type: string }
+                guestDetails: # Optional if we already have it from user profile, but good to confirm
+                   type: object
+                   properties:
+                     name: { type: string }
+                     email: { type: string }
+                     phone: { type: string }
+      responses:
+        201:
+          description: Booking Confirmed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/Booking'
+        400:
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bookings/my-bookings:
+    get:
+      summary: Get user's booking history
+      operationId: getUserBookings
+      tags: [Bookings]
+      responses:
+        200:
+          description: List of user bookings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+
+  /early-access-users:
+    post:
+      summary: Create Early Access User
+      description: Registers a new user for early access.
+      operationId: createEarlyAccessUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - name
+                - primaryUseCase
+              properties:
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+                primaryUseCase:
+                  type: string
+                company:
+                  type: string
+                role:
+                  type: string
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  statusCode:
+                    type: integer
+                  message:
+                    type: string
+        "409":
+          description: Conflict - Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: boolean
+          example: false
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Error message details"
+      
+    UserRole:
+      type: string
+      enum: ['CUSTOMER', 'HOTEL_MANAGER', 'ADMIN']
+    
+    PaymentMode:
+      type: string
+      enum: ['ONLINE', 'PAY_AT_HOTEL']
+    
+    BookingStatus:
+      type: string
+      enum: ['PENDING_PAYMENT', 'CONFIRMED', 'CANCELLED', 'COMPLETED']
+
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        passwordHash: { type: string }
+        role: { $ref: '#/components/schemas/UserRole' }
+        phone: { type: string }
+      required: [id, name, email, passwordHash, role]
+
+    Amenity:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        scopeId: { type: string, nullable: true }
+      required: [id, name]
+
+    Hotel:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        city: { type: string }
+        address: { type: string }
+        description: { type: string, nullable: true }
+        rating: { type: number }
+        lowestPrice: { type: number, nullable: true }
+        images: { type: array, items: { type: string } }
+        amenities: { type: array, items: { $ref: '#/components/schemas/Amenity' } }
+      required: [id, name, city, address, rating, images, amenities]
+
+    RoomType:
+      type: object
+      properties:
+        id: { type: string }
+        hotelId: { type: string }
+        name: { type: string }
+        price: { type: number }
+        capacity: { type: integer }
+        totalInventory: { type: integer }
+        images: { type: array, items: { type: string } }
+        amenities: { type: array, items: { $ref: '#/components/schemas/Amenity' } }
+      required: [id, hotelId, name, price, capacity, totalInventory, images, amenities]
+
+    Booking:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        hotelId: { type: string }
+        roomTypeId: { type: string }
+        checkIn: { type: string, format: date }
+        checkOut: { type: string, format: date }
+        guestDetails:
+          type: object
+          properties:
+            name: { type: string }
+            email: { type: string, format: email }
+            phone: { type: string }
+          required: [name, email, phone]
+        totalPrice: { type: number }
+        paymentMode: { $ref: '#/components/schemas/PaymentMode' }
+        status: { $ref: '#/components/schemas/BookingStatus' }
+        transactionId: { type: string }
+      required: [id, userId, hotelId, roomTypeId, checkIn, checkOut, guestDetails, totalPrice, paymentMode, status]

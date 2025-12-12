@@ -1,0 +1,25 @@
+model bookings {
+  id               String         @id @db.VarChar(50)
+  user_id          String?        @db.VarChar(50)
+  hotel_id         String?        @db.VarChar(50)
+  room_type_id     String?        @db.VarChar(50)
+  guest_details_id String?        @db.VarChar(50)
+  payment_mode_id  String?        @db.VarChar(50)
+  check_in         DateTime       @db.Date
+  check_out        DateTime       @db.Date
+  total_price      Decimal        @db.Decimal(10, 2)
+  status           String         @db.VarChar(20)
+  transaction_id   String?        @db.VarChar(100)
+  users            users?         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bookings_ibfk_1")
+  hotels           hotels?        @relation(fields: [hotel_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bookings_ibfk_2")
+  room_types       room_types?    @relation(fields: [room_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bookings_ibfk_3")
+  guest_details    guest_details? @relation(fields: [guest_details_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bookings_ibfk_4")
+  payment_modes    payment_modes? @relation(fields: [payment_mode_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bookings_ibfk_5")
+  reviews          reviews[]
+
+  @@index([guest_details_id], map: "guest_details_id")
+  @@index([hotel_id], map: "hotel_id")
+  @@index([payment_mode_id], map: "payment_mode_id")
+  @@index([room_type_id], map: "room_type_id")
+  @@index([user_id], map: "user_id")
+}

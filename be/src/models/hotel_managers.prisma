@@ -1,0 +1,10 @@
+model hotel_managers {
+  hotel_id  String   @db.VarChar(50)
+  user_id   String   @db.VarChar(50)
+  is_active Boolean? @default(true)
+  hotels    hotels   @relation(fields: [hotel_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "hotel_managers_ibfk_1")
+  users     users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "hotel_managers_ibfk_2")
+
+  @@id([hotel_id, user_id])
+  @@index([user_id], map: "user_id")
+}

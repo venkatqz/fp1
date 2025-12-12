@@ -1,0 +1,16 @@
+model reviews {
+  id           String    @id @db.VarChar(50)
+  hotel_id     String?   @db.VarChar(50)
+  user_id      String?   @db.VarChar(50)
+  booking_id   String?   @db.VarChar(50)
+  rating       Int?
+  comment      String?   @db.Text
+  date_created DateTime? @default(now()) @db.DateTime(0)
+  hotels       hotels?   @relation(fields: [hotel_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reviews_ibfk_1")
+  users        users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reviews_ibfk_2")
+  bookings     bookings? @relation(fields: [booking_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reviews_ibfk_3")
+
+  @@index([booking_id], map: "booking_id")
+  @@index([hotel_id], map: "hotel_id")
+  @@index([user_id], map: "user_id")
+}

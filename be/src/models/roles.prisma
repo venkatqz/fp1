@@ -1,0 +1,5 @@
+model roles {
+  id    String  @id @db.VarChar(50)
+  name  String  @unique(map: "name") @db.VarChar(50)
+  users users[]
+}

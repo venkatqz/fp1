@@ -1,0 +1,9 @@
+model hotel_amenities {
+  hotel_id   String    @db.VarChar(50)
+  amenity_id String    @db.VarChar(50)
+  hotels     hotels    @relation(fields: [hotel_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "hotel_amenities_ibfk_1")
+  amenities  amenities @relation(fields: [amenity_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "hotel_amenities_ibfk_2")
+
+  @@id([hotel_id, amenity_id])
+  @@index([amenity_id], map: "amenity_id")
+}
