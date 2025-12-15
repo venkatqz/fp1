@@ -11,10 +11,10 @@ export class AuthService {
     /**
      * Register a new user
      * @param requestBody
-     * @returns User User created successfully
+     * @returns any User created successfully
      * @throws ApiError
      */
-    public static postAuthRegister(
+    public static registerUser(
         requestBody: {
             name: string;
             email: string;
@@ -22,12 +22,20 @@ export class AuthService {
             role: UserRole;
             phone?: string;
         },
-    ): CancelablePromise<User> {
+    ): CancelablePromise<{
+        status?: boolean;
+        statusCode?: number;
+        message?: string;
+        data?: User;
+    }> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/auth/register',
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                400: `Bad Request`,
+            },
         });
     }
     /**
@@ -36,20 +44,58 @@ export class AuthService {
      * @returns any Login successful
      * @throws ApiError
      */
-    public static postAuthLogin(
+    public static loginUser(
         requestBody: {
             email: string;
             password: string;
         },
     ): CancelablePromise<{
-        token?: string;
-        user?: User;
+        status?: boolean;
+        statusCode?: number;
+        message?: string;
+        data?: {
+            token?: string;
+            user?: User;
+        };
     }> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/auth/login',
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                401: `Invalid credentials`,
+            },
+        });
+    }
+    /**
+     * Refresh Access Token
+     * @param requestBody
+     * @returns any Token refreshed successfully
+     * @throws ApiError
+     */
+    public static refreshToken(
+        requestBody: {
+            refreshToken: string;
+        },
+    ): CancelablePromise<{
+        status?: boolean;
+        statusCode?: number;
+        message?: string;
+        data?: {
+            accessToken?: string;
+            refreshToken?: string;
+        };
+    }> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/auth/refresh-token',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Refresh token required`,
+                401: `Invalid or expired refresh token`,
+            },
         });
     }
 }

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
     Box,
     Container,
@@ -10,9 +10,10 @@ import {
     Alert,
     Pagination,
     Stack,
+    Button,
 } from '@mui/material';
 import HotelCard from '../components/HotelCard';
-import { HotelsService } from '../client';
+import { HotelsService, ApiError } from '../client';
 import type { Hotel } from '../client/models/Hotel';
 
 export default function SearchPage() {
@@ -20,6 +21,7 @@ export default function SearchPage() {
     const [hotels, setHotels] = useState<Hotel[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [authError, setAuthError] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
 
     // Read URL params
@@ -39,32 +41,50 @@ export default function SearchPage() {
         try {
             setLoading(true);
             setError('');
-            const response = await HotelsService.getHotels(
-                queryParam || undefined,
-                undefined, // city - generic query handles this
-                checkIn,
-                checkOut,
-                guests,
-                sortBy as any, // Cast to expected enum string
-                undefined, // minPrice
-                undefined, // maxPrice
+            setAuthError(false);
+
+            // Use HotelsService for /hotels/search endpoint
+            // Provide defaults for dates if missing to ensure availability check works
+            const today = new Date().toISOString().split('T')[0];
+            const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+            const response = await HotelsService.searchAvailableHotels(
+                queryParam || '',
+                checkIn || today,
+                checkOut || tomorrow,
+                guests || 1,
+                (sortBy as any) || 'rating',
                 page,
-                12 // limit
+                12
             );
 
+            // Cast response to any to handle structure mismatch (generated type vs actual backend return)
             const result = response as any;
 
-            if (result.data) {
-                setHotels(result.data);
-                const total = result.meta?.total || 0;
-                setTotalPages(Math.ceil(total / 12));
+            if (result.status && result.data) {
+                // Backend returns { data: { data: [...], meta: ... } }
+                if (result.data.data && Array.isArray(result.data.data)) {
+                    setHotels(result.data.data);
+                    const total = result.data.meta?.total || 0;
+                    setTotalPages(Math.ceil(total / 12));
+                } else if (Array.isArray(result.data)) {
+                    // Fallback for simple array
+                    setHotels(result.data);
+                    setTotalPages(1);
+                }
             } else {
                 console.warn('Response format unexpected:', result);
+                setHotels([]);
             }
 
         } catch (err) {
             console.error('Fetch error:', err);
-            setError('Failed to fetch hotels. Is the backend running?');
+
+            if (err instanceof ApiError && err.status === 401) {
+                setAuthError(true);
+            } else {
+                setError('Failed to fetch hotels. Is the backend running?');
+            }
         } finally {
             setLoading(false);
         }
@@ -105,19 +125,37 @@ export default function SearchPage() {
                 </Box>
             </Box>
 
-            {/* Error State */}
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            {/* Auth Error State */}
+            {authError && (
+                <Box sx={{ textAlign: 'center', py: 8 }}>
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                        Please sign in to view availability and search results.
+                    </Typography>
+                    <Button
+                        component={Link}
+                        to="/login"
+                        variant="contained"
+                        color="primary"
+                        sx={{ mt: 2 }}
+                    >
+                        Sign In / Sign Up
+                    </Button>
+                </Box>
+            )}
+
+            {/* Generic Error State */}
+            {error && !authError && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
             {/* Loading State */}
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
                     <CircularProgress />
                 </Box>
-            ) : (
+            ) : !authError && (
                 <>
                     {/* Results Grid */}
                     <Grid container spacing={3}>
-                        {hotels.map((hotel) => (
+                        {Array.isArray(hotels) && hotels.map((hotel) => (
                             <Grid item xs={12} sm={6} md={4} key={hotel.id}>
                                 {/* 
                   Mapping API Hotel to the Props expected by HotelCard via 'any' 

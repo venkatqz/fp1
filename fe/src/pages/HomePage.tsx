@@ -9,7 +9,14 @@ const HomePage: React.FC = () => {
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
-        if (storedUser) setUser(JSON.parse(storedUser));
+        if (storedUser && storedUser !== "undefined") {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse user from local storage", e);
+                localStorage.removeItem('user'); // Clean up corrupt data
+            }
+        }
     }, []);
 
     return (

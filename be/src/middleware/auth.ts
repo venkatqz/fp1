@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../lib/auth';
 import { JWTPayload, UserRole } from '../../apicontract';
+import prisma from '../lib/prisma';
 
 // Extend Express Request interface to include user
 declare global {
@@ -14,8 +15,9 @@ declare global {
 /**
  * Middleware to verify JWT Access Token
  * Checks Authorization header for "Bearer <token>"
+ * Validates token against database to ensure it's still active/valid
  */
-export function authenticate(req: Request, res: Response, next: NextFunction) {
+export async function authenticate(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
@@ -34,29 +36,48 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
         return res.status(401).json({ message: 'Invalid or expired token' });
     }
 
-    // Attach user payload to request
-    (req as any).user = payload;
-    next();
+    try {
+        // Validate token against the database
+        const user = await prisma.users.findUnique({
+            where: { id: payload.userId },
+            select: { access_token: true }
+        });
+
+        if (!user) {
+            return res.status(401).json({ message: 'User not found' });
+        }
+
+        if (user.access_token !== token) {
+            return res.status(401).json({ message: 'Token invalid or revoked' });
+        }
+
+        // Attach user payload to request
+        (req as any).user = payload;
+        next();
+    } catch (error) {
+        console.error('Authentication error:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
 }
 
 /**
  * Middleware to authorize specific roles
  * Must be used AFTER authenticate middleware
  */
-export function authorize(...roles: UserRole[]) {
-    return (req: Request, res: Response, next: NextFunction) => {
-        const user = (req as any).user as JWTPayload;
+// export function authorize(...roles: UserRole[]) {
+//     return (req: Request, res: Response, next: NextFunction) => {
+//         const user = (req as any).user as JWTPayload;
 
-        if (!user) {
-            return res.status(401).json({ message: 'User not authenticated' });
-        }
+//         if (!user) {
+//             return res.status(401).json({ message: 'User not authenticated' });
+//         }
 
-        if (!roles.includes(user.role)) {
-            return res.status(403).json({
-                message: `Forbidden: Requires one of roles [${roles.join(', ')}]`
-            });
-        }
+//         if (!roles.includes(user.role)) {
+//             return res.status(403).json({
+//                 message: `Forbidden: Requires one of roles [${roles.join(', ')}]`
+//             });
+//         }
 
-        next();
-    };
-}
+//         next();
+//     };
+// }

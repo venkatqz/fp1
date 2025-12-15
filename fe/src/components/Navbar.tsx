@@ -45,8 +45,17 @@ const Navbar: React.FC = () => {
 
     const checkUser = () => {
         const storedUser = localStorage.getItem('user');
-        if (storedUser) setUser(JSON.parse(storedUser));
-        else setUser(null);
+        if (storedUser && storedUser !== "undefined") {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse user from local storage in Navbar", e);
+                localStorage.removeItem('user');
+                setUser(null);
+            }
+        } else {
+            setUser(null);
+        }
     };
 
     useEffect(() => {

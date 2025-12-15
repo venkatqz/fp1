@@ -10,6 +10,7 @@ export type { OpenAPIConfig } from './core/OpenAPI';
 export type { Amenity } from './models/Amenity';
 export type { Booking } from './models/Booking';
 export { BookingStatus } from './models/BookingStatus';
+export type { ErrorResponse } from './models/ErrorResponse';
 export type { Hotel } from './models/Hotel';
 export { PaymentMode } from './models/PaymentMode';
 export type { RoomType } from './models/RoomType';
@@ -18,4 +19,5 @@ export { UserRole } from './models/UserRole';
 
 export { AuthService } from './services/AuthService';
 export { BookingsService } from './services/BookingsService';
+export { DefaultService } from './services/DefaultService';
 export { HotelsService } from './services/HotelsService';

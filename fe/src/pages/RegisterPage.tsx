@@ -22,6 +22,13 @@ const RegisterPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        // Validation
+        if (!formData.name || !formData.email || !formData.password) {
+            setError('Please fill in all required fields.');
+            return;
+        }
+
         setLoading(true);
 
         try {

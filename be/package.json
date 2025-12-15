@@ -4,7 +4,7 @@
   "main": "main.ts",
   "scripts": {
     "start": "node dist/main.js",
-    "dev": "nodemon main.ts",
+    "dev": "nodemon --watch src -e ts,js,json main.ts",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prisma:merge": "node script/merge-prisma.mjs",

@@ -91,6 +91,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /auth/refresh-token:
+    post:
+      summary: Refresh Access Token
+      security: []
+      operationId: refreshToken
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        200:
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: boolean }
+                  statusCode: { type: integer }
+                  message: { type: string }
+                  data:
+                    type: object
+                    properties:
+                      accessToken: { type: string }
+                      refreshToken: { type: string }
+        400:
+          description: Refresh token required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        401:
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   # --- Hotels ---
   /hotels:
     get:
@@ -178,6 +220,8 @@ paths:
 
     post:
       summary: Add a new Hotel (Admin/Manager only)
+      security:
+        - bearerAuth: []
       operationId: addHotel
       tags: [Hotels]
       requestBody:
@@ -202,6 +246,154 @@ paths:
                     type: string
                   data:
                     $ref: '#/components/schemas/Hotel'
+
+  /hotels/search:
+    get:
+      summary: Search Available Hotels
+      tags: [Hotels]
+      description: Search for hotels by city/name with availability, filtering, and sorting.
+      operationId: searchAvailableHotels
+      parameters:
+        - name: query
+          in: query
+          description: Search term for City, Hotel Name, or Address (e.g., "Mumbai")
+          required: true
+          schema:
+            type: string
+            example: "Mumbai"
+        - name: checkIn
+          in: query
+          description: Check-in date (YYYY-MM-DD)
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2024-12-01"
+        - name: checkOut
+          in: query
+          description: Check-out date (YYYY-MM-DD)
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2024-12-05"
+        - name: guests
+          in: query
+          description: Number of guests (to filter room capacity)
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: sortBy
+          in: query
+          description: Sort order for results
+          required: false
+          schema:
+            type: string
+            enum: [price_low, price_high, rating]
+            default: "price_low"
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of results per page
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Successful search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  statusCode:
+                    type: integer
+                    example: 200
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          description: Hotel ID
+                        name:
+                          type: string
+                          description: Name of the hotel
+                        city:
+                          type: string
+                        address:
+                          type: string
+                        description:
+                          type: string
+                        avg_rating:
+                          type: number
+                          format: float
+                          example: 4.5
+                        starting_price:
+                          type: number
+                          format: float
+                          description: Lowest price found among room types
+                        hotel_amenities:
+                          type: string
+                          description: Comma-separated list of hotel amenities (from GROUP_CONCAT)
+                          example: "wifi,pool,parking"
+                        manager_names:
+                          type: array
+                          items:
+                            type: string
+                          description: List of active managers (from JSON_ARRAYAGG)
+                        rooms_details:
+                          type: array
+                          description: Nested list of rooms with their specific availability
+                          items:
+                            type: object
+                            properties:
+                              room_name:
+                                type: string
+                              price:
+                                type: number
+                              available_rooms:
+                                type: integer
+                                description: Calculated availability (Total - Booked)
+                              amenities:
+                                type: array
+                                items:
+                                  type: string
+        "400":
+          description: Bad Request (Invalid dates or missing parameters)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+        "500":
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
 
   /hotels/{id}:
     get:
@@ -284,6 +476,8 @@ paths:
   /bookings/intent:
     post:
       summary: Step 1 - Calculate Price & Initiate Payment
+      security:
+        - bearerAuth: []
       operationId: createBookingIntent
       description: |
         Calculates total price based on formatting, checks availability/inventory reduction, 
@@ -295,13 +489,14 @@ paths:
           application/json:
             schema:
               type: object
-              required: [hotelId, roomTypeId, checkIn, checkOut, guests]
+              required: [hotelId, roomTypeId, checkIn, checkOut, guests, paymentMode]
               properties:
                 hotelId: { type: string }
                 roomTypeId: { type: string }
                 checkIn: { type: string, format: date }
                 checkOut: { type: string, format: date }
                 guests: { type: integer }
+                paymentMode: { $ref: '#/components/schemas/PaymentMode' }
       responses:
         200:
           description: Payment Intent Created
@@ -333,6 +528,8 @@ paths:
   /bookings/confirm:
     post:
       summary: Step 2 - Finalize Booking
+      security:
+        - bearerAuth: []
       operationId: confirmBooking
       description: Called after successful payment on the client side to persist the booking in the DB.
       tags: [Bookings]
@@ -342,8 +539,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [paymentIntentId]
+              required: [bookingId, paymentIntentId]
               properties:
+                bookingId: { type: string }
                 paymentIntentId: { type: string }
                 guestDetails: # Optional if we already have it from user profile, but good to confirm
                    type: object
@@ -377,6 +575,8 @@ paths:
   /bookings/my-bookings:
     get:
       summary: Get user's booking history
+      security:
+        - bearerAuth: []
       operationId: getUserBookings
       tags: [Bookings]
       responses:
@@ -459,6 +659,11 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     ErrorResponse:
       type: object
@@ -516,6 +721,10 @@ components:
         lowestPrice: { type: number, nullable: true }
         images: { type: array, items: { type: string } }
         amenities: { type: array, items: { $ref: '#/components/schemas/Amenity' } }
+        rooms: 
+          type: array
+          items: 
+            $ref: '#/components/schemas/RoomType'
       required: [id, name, city, address, rating, images, amenities]
 
     RoomType:

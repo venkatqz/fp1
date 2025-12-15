@@ -16,7 +16,7 @@ export class BookingsService {
      * @returns any Payment Intent Created
      * @throws ApiError
      */
-    public static postBookingsIntent(
+    public static createBookingIntent(
         requestBody: {
             hotelId: string;
             roomTypeId: string;
@@ -25,10 +25,15 @@ export class BookingsService {
             guests: number;
         },
     ): CancelablePromise<{
-        paymentIntentId?: string;
-        clientSecret?: string;
-        totalPrice?: number;
-        currency?: string;
+        status?: boolean;
+        statusCode?: number;
+        message?: string;
+        data?: {
+            paymentIntentId?: string;
+            clientSecret?: string;
+            totalPrice?: number;
+            currency?: string;
+        };
     }> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -44,11 +49,12 @@ export class BookingsService {
      * Step 2 - Finalize Booking
      * Called after successful payment on the client side to persist the booking in the DB.
      * @param requestBody
-     * @returns Booking Booking Confirmed
+     * @returns any Booking Confirmed
      * @throws ApiError
      */
-    public static postBookingsConfirm(
+    public static confirmBooking(
         requestBody: {
+            bookingId: string;
             paymentIntentId: string;
             guestDetails?: {
                 name?: string;
@@ -56,20 +62,33 @@ export class BookingsService {
                 phone?: string;
             };
         },
-    ): CancelablePromise<Booking> {
+    ): CancelablePromise<{
+        status?: boolean;
+        statusCode?: number;
+        message?: string;
+        data?: Booking;
+    }> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/bookings/confirm',
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                400: `Invalid request`,
+            },
         });
     }
     /**
      * Get user's booking history
-     * @returns Booking List of user bookings
+     * @returns any List of user bookings
      * @throws ApiError
      */
-    public static getBookingsMyBookings(): CancelablePromise<Array<Booking>> {
+    public static getUserBookings(): CancelablePromise<{
+        status?: boolean;
+        statusCode?: number;
+        message?: string;
+        data?: Array<Booking>;
+    }> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/bookings/my-bookings',

@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Amenity } from './Amenity';
+import type { RoomType } from './RoomType';
 export type Hotel = {
     id: string;
     name: string;
@@ -13,5 +14,6 @@ export type Hotel = {
     lowestPrice?: number | null;
     images: Array<string>;
     amenities: Array<Amenity>;
+    rooms?: Array<RoomType>;
 };
 

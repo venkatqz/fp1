@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/refresh-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh Access Token */
+        post: operations["refreshToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hotels": {
         parameters: {
             query?: never;
@@ -53,6 +70,26 @@ export interface paths {
         put?: never;
         /** Add a new Hotel (Admin/Manager only) */
         post: operations["addHotel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hotels/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Available Hotels
+         * @description Search for hotels by city/name with availability, filtering, and sorting.
+         */
+        get: operations["searchAvailableHotels"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -216,6 +253,7 @@ export interface components {
             lowestPrice?: number | null;
             images: string[];
             amenities: components["schemas"]["Amenity"][];
+            rooms?: components["schemas"]["RoomType"][];
         };
         RoomType: {
             id: string;
@@ -346,6 +384,58 @@ export interface operations {
             };
         };
     };
+    refreshToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    refreshToken: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Token refreshed successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status?: boolean;
+                        statusCode?: number;
+                        message?: string;
+                        data?: {
+                            accessToken?: string;
+                            refreshToken?: string;
+                        };
+                    };
+                };
+            };
+            /** @description Refresh token required */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid or expired refresh token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     searchHotels: {
         parameters: {
             query?: {
@@ -434,6 +524,109 @@ export interface operations {
                         statusCode?: number;
                         message?: string;
                         data?: components["schemas"]["Hotel"];
+                    };
+                };
+            };
+        };
+    };
+    searchAvailableHotels: {
+        parameters: {
+            query: {
+                /** @description Search term for City, Hotel Name, or Address (e.g., "Mumbai") */
+                query: string;
+                /** @description Check-in date (YYYY-MM-DD) */
+                checkIn: string;
+                /** @description Check-out date (YYYY-MM-DD) */
+                checkOut: string;
+                /** @description Number of guests (to filter room capacity) */
+                guests?: number;
+                /** @description Sort order for results */
+                sortBy?: "price_low" | "price_high" | "rating";
+                /** @description Page number for pagination */
+                page?: number;
+                /** @description Number of results per page */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful search results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example true */
+                        status?: boolean;
+                        /** @example 200 */
+                        statusCode?: number;
+                        data?: {
+                            /**
+                             * Format: uuid
+                             * @description Hotel ID
+                             */
+                            id?: string;
+                            /** @description Name of the hotel */
+                            name?: string;
+                            city?: string;
+                            address?: string;
+                            description?: string;
+                            /**
+                             * Format: float
+                             * @example 4.5
+                             */
+                            avg_rating?: number;
+                            /**
+                             * Format: float
+                             * @description Lowest price found among room types
+                             */
+                            starting_price?: number;
+                            /**
+                             * @description Comma-separated list of hotel amenities (from GROUP_CONCAT)
+                             * @example wifi,pool,parking
+                             */
+                            hotel_amenities?: string;
+                            /** @description List of active managers (from JSON_ARRAYAGG) */
+                            manager_names?: string[];
+                            /** @description Nested list of rooms with their specific availability */
+                            rooms_details?: {
+                                room_name?: string;
+                                price?: number;
+                                /** @description Calculated availability (Total - Booked) */
+                                available_rooms?: number;
+                                amenities?: string[];
+                            }[];
+                        }[];
+                    };
+                };
+            };
+            /** @description Bad Request (Invalid dates or missing parameters) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example false */
+                        status?: boolean;
+                        message?: string;
+                    };
+                };
+            };
+            /** @description Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example false */
+                        status?: boolean;
+                        message?: string;
                     };
                 };
             };
@@ -569,6 +762,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    bookingId: string;
                     paymentIntentId: string;
                     guestDetails?: {
                         name?: string;

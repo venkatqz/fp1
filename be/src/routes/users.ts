@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import * as UsersController from '../controllers/users';
+import { createEarlyAccessUser } from '../controllers/users';
 
 const router = Router();
 
-router.post('/early-access-users', UsersController.createEarlyAccessUser);
+router.post('/early-access-users', createEarlyAccessUser);
 
 export default router;

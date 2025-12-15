@@ -6,11 +6,31 @@ const prisma = new PrismaClient();
 async function main() {
     console.log('Start seeding...');
 
+    // 0. Create Amenity Scopes
+    const scopes = ['HOTEL', 'ROOM', 'BOTH'];
+    for (const scope of scopes) {
+        await prisma.amenity_scopes.upsert({
+            where: { id: scope },
+            update: {},
+            create: { id: scope, name: scope }
+        });
+    }
+
     // 1. Create Amenities
     const wifi = await prisma.amenities.upsert({
         where: { id: 'am_wifi' },
         update: {},
         create: { id: 'am_wifi', name: 'Free WiFi', scope_id: 'BOTH' }
+    });
+    const pool = await prisma.amenities.upsert({
+        where: { id: 'am_pool' },
+        update: {},
+        create: { id: 'am_pool', name: 'Swimming Pool', scope_id: 'HOTEL' }
+    });
+    const ac = await prisma.amenities.upsert({
+        where: { id: 'am_ac' },
+        update: {},
+        create: { id: 'am_ac', name: 'Air Conditioning', scope_id: 'ROOM' }
     });
 
     // 2. Create Hotels

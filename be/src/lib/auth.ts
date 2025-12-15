@@ -3,8 +3,8 @@ import jwt from 'jsonwebtoken';
 import { JWTPayload } from '../../apicontract';
 
 // In production, these should be in environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_123';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dev_refresh_secret_456';
+const JWT_SECRET = (process.env.JWT_SECRET || 'dev_secret_key_123') as string;
+const JWT_REFRESH_SECRET = (process.env.JWT_REFRESH_SECRET || 'dev_refresh_secret_456') as string;
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
 const REFRESH_TOKEN_EXPIRY = '7d'; // 7 days
 

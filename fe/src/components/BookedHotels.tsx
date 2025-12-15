@@ -24,7 +24,15 @@ const BookedHotels: React.FC = () => {
         try {
             const response = await fetch('http://localhost:3000/bookings/my-bookings');
             const data = await response.json();
-            setBookings(data);
+
+            if (Array.isArray(data)) {
+                setBookings(data);
+            } else if (data && Array.isArray(data.data)) {
+                // Check if wrapped in ApiResponse
+                setBookings(data.data);
+            } else {
+                setBookings([]);
+            }
         } catch (err) {
             console.error("Failed to fetch bookings", err);
         } finally {

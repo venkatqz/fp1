@@ -5,7 +5,14 @@ import { ApiResponse } from '../../apicontract';
 export const createBookingIntent = async (req: Request, res: Response) => {
     try {
         console.log('[Bookings] Received Intent Request:', req.body);
-        const result = await BookingService.createIntent(req.body);
+
+        // Inject userId from authenticated user
+        const userId = (req as any).user?.userId;
+
+        const result = await BookingService.createIntent({
+            ...req.body,
+            userId // Pass userId to service
+        });
 
         const response: ApiResponse = {
             status: true,
@@ -16,10 +23,10 @@ export const createBookingIntent = async (req: Request, res: Response) => {
 
         res.json(response);
     } catch (error: any) {
-        if (error.message === 'Missing required fields') {
+        if (error.message === 'Missing required fields' || error.message.includes('Room capacity exceeded') || error.message.includes('Room not available') || error.message.includes('Check-out date')) {
             return res.status(400).json({ status: false, statusCode: 400, message: error.message });
         }
-        res.status(500).json({ status: false, statusCode: 500, message: 'Internal server error' });
+        res.status(500).json({ status: false, statusCode: 500, message: error.message || 'Internal server error' });
     }
 };
 

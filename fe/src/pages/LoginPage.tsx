@@ -38,20 +38,24 @@ const LoginPage: React.FC = () => {
                 throw new Error(data.message || 'Login failed');
             }
 
+            if (!data.status || !data.data) {
+                throw new Error(data.message || 'Login failed');
+            }
+
             // Simple storage for demo
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            localStorage.setItem('token', data.data.token);
+            localStorage.setItem('user', JSON.stringify(data.data.user));
 
             window.dispatchEvent(new Event("storage")); // Notify other components
 
-            alert(`Welcome back, ${data.user.name}!`);
+            alert(`Welcome back, ${data.data.user.name}!`);
 
             // Redirect Logic
             if (from) {
                 navigate(from);
             } else {
                 // Default Redirect
-                if (data.user.role === 'HOTEL_MANAGER') {
+                if (data.data.user.role === 'HOTEL_MANAGER') {
                     navigate('/admin/hotel/new');
                 } else {
                     navigate('/search');

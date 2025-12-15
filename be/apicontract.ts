@@ -19,6 +19,7 @@ export type Amenity = Schema<'Amenity'>;
 export type RegisterRequestDTO = paths['/auth/register']['post']['requestBody']['content']['application/json'];
 export type LoginRequestDTO = paths['/auth/login']['post']['requestBody']['content']['application/json'];
 export type SearchHotelRequestDTO = NonNullable<paths['/hotels']['get']['parameters']['query']>;
+export type SearchAvailableHotelRequestDTO = NonNullable<paths['/hotels/search']['get']['parameters']['query']>;
 export type EarlyAccessRequestDTO = paths['/early-access-users']['post']['requestBody']['content']['application/json'];
 
 // Helper types not strictly in OpenAPI but used in app
@@ -53,6 +54,7 @@ export interface SearchHotelResponseDTO {
         limit: number;
     };
 }
+export type SearchAvailableHotelResponseDTO = paths['/hotels/search']['get']['responses']['200']['content']['application/json'];
 
 // ...
 export type HotelDTO = Hotel;
@@ -77,6 +79,14 @@ export function toHotelDTO(hotel: any): HotelDTO {
             id: ha.amenities.id,
             name: ha.amenities.name,
             scopeId: ha.amenities.scope_id
+        })) : [],
+        rooms: hotel.room_types ? hotel.room_types.map((rt: any) => ({
+            id: rt.id,
+            name: rt.name,
+            price: Number(rt.price),
+            capacity: { adults: rt.capacity, children: 0 }, // Using capacity for adults, children hardcoded 0 for now
+            available: rt.total_inventory, // Should calculate real availability, but for Details view static is okay for now or fetched via separate inventory check
+            amenities: rt.room_amenities?.map((ra: any) => ra.amenities?.name) || []
         })) : []
     };
 }

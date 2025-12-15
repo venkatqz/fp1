@@ -22,7 +22,7 @@ const ManageHotelPage: React.FC = () => {
     const fetchHotelDetails = async () => {
         try {
             setIsLoading(true);
-            const hotel = await HotelsService.getHotels1(id!);
+            const hotel = await HotelsService.getHotelById(id!);
             setInitialData(hotel as unknown as HotelFormData); // Casting for simplicity
         } catch (err) {
             console.error(err);
