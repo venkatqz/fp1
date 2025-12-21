@@ -4,8 +4,6 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { OpenAPI } from './client';
-import { AuthProvider } from './context/AuthContext';
 import theme from './theme';
 
 
@@ -24,9 +22,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <App />
     </ThemeProvider>
   </React.StrictMode>,
 );

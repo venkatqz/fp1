@@ -1,0 +1,12 @@
+model booking_rooms {
+  id           String      @id @db.VarChar(50)
+  booking_id   String      @db.VarChar(50)
+  room_type_id String      @db.VarChar(50)
+  quantity     Int         @default(1)
+  price        Decimal     @db.Decimal(10, 2)
+  bookings     bookings    @relation(fields: [booking_id], references: [id], onDelete: Cascade, map: "booking_rooms_ibfk_1")
+  room_types   room_types  @relation(fields: [room_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "booking_rooms_ibfk_2")
+
+  @@index([booking_id], map: "booking_id")
+  @@index([room_type_id], map: "room_type_id")
+}

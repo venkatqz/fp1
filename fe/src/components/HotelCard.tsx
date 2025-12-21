@@ -173,7 +173,7 @@ const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
                                 alert('Error: Hotel ID is missing');
                                 return;
                             }
-                            navigate(`/hotel/${hotel.id}`);
+                            navigate(`/hotel/${hotel.id}`, { state: { hotel } });
                         }}
                         variant="contained"
                         disableElevation

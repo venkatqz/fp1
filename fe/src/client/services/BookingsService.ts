@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Booking } from '../models/Booking';
+import type { PaymentMode } from '../models/PaymentMode';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -23,6 +24,12 @@ export class BookingsService {
             checkIn: string;
             checkOut: string;
             guests: number;
+            paymentMode: PaymentMode;
+            guestDetails?: Array<{
+                name?: string;
+                email?: string;
+                phone?: string;
+            }>;
         },
     ): CancelablePromise<{
         status?: boolean;
@@ -56,11 +63,11 @@ export class BookingsService {
         requestBody: {
             bookingId: string;
             paymentIntentId: string;
-            guestDetails?: {
+            guestDetails?: Array<{
                 name?: string;
                 email?: string;
                 phone?: string;
-            };
+            }>;
         },
     ): CancelablePromise<{
         status?: boolean;

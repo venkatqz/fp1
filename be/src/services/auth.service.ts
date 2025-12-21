@@ -6,6 +6,7 @@ import {
     generateRefreshToken,
     verifyRefreshToken
 } from '../lib/auth';
+import { UserRole as UserRoleEnum } from '../enums';
 import {
     LoginRequestDTO,
     RegisterRequestDTO,
@@ -38,7 +39,7 @@ export const AuthService = {
         }
 
         const passwordHash = await hashPassword(password);
-        const targetRoleStr = role || 'CUSTOMER';
+        const targetRoleStr = role || UserRoleEnum.CUSTOMER;
         const roleId = await getRoleId(targetRoleStr);
         const userId = `u_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
@@ -55,7 +56,7 @@ export const AuthService = {
         const payload: JWTPayload = {
             userId: newUser.id,
             email: newUser.email,
-            role: (newUser.roles?.name as UserRole) || 'CUSTOMER'
+            role: (newUser.roles?.name as UserRole) || UserRoleEnum.CUSTOMER
         };
 
         const accessToken = generateAccessToken(payload);
@@ -77,9 +78,8 @@ export const AuthService = {
                 id: newUser.id,
                 name: newUser.name,
                 email: newUser.email,
-                role: (newUser.roles?.name as UserRole) || 'CUSTOMER',
-                ...(newUser.phone ? { phone: newUser.phone } : {}),
-                passwordHash: newUser.password_hash
+                role: (newUser.roles?.name as UserRole) || UserRoleEnum.CUSTOMER,
+                ...(newUser.phone ? { phone: newUser.phone } : {})
             }
         };
     },
@@ -100,7 +100,7 @@ export const AuthService = {
         const payload: JWTPayload = {
             userId: user.id,
             email: user.email,
-            role: (user.roles?.name as UserRole) || 'CUSTOMER'
+            role: (user.roles?.name as UserRole) || UserRoleEnum.CUSTOMER
         };
 
         const accessToken = generateAccessToken(payload);
@@ -121,58 +121,12 @@ export const AuthService = {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role: (user.roles?.name as UserRole) || 'CUSTOMER',
-                ...(user.phone ? { phone: user.phone } : {}),
-                passwordHash: user.password_hash
+                role: (user.roles?.name as UserRole) || UserRoleEnum.CUSTOMER,
+                ...(user.phone ? { phone: user.phone } : {})
             }
         };
     },
 
-    refreshToken: async (token: string): Promise<RefreshTokenResponseDTO> => {
-        const payload = verifyRefreshToken(token);
-        if (!payload) {
-            throw new Error('Invalid or expired refresh token');
-        }
 
-        const user = await UserRepository.findUnique({ id: payload.userId });
 
-        if (!user || user.refresh_token !== token) {
-            throw new Error('Invalid refresh token state');
-        }
-
-        const newPayload: JWTPayload = {
-            userId: user.id,
-            email: user.email,
-            role: (user.roles?.name as UserRole) || 'CUSTOMER'
-        };
-
-        const newAccessToken = generateAccessToken(newPayload);
-        const newRefreshToken = generateRefreshToken(newPayload);
-
-        await UserRepository.update({
-            where: { id: user.id },
-            data: {
-                refresh_token: newRefreshToken,
-                access_token: newAccessToken
-            }
-        });
-
-        return {
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken
-        };
-    },
-
-    logout: async (token: string): Promise<void> => {
-        const payload = verifyRefreshToken(token);
-        if (payload) {
-            await UserRepository.update({
-                where: { id: payload.userId },
-                data: {
-                    refresh_token: null,
-                    access_token: null
-                }
-            });
-        }
-    }
 };

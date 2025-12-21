@@ -19,5 +19,5 @@ export { UserRole } from './models/UserRole';
 
 export { AuthService } from './services/AuthService';
 export { BookingsService } from './services/BookingsService';
-export { DefaultService } from './services/DefaultService';
-export { HotelsService } from './services/HotelsService';
+export { CustomerService } from './services/CustomerService';
+export { ManagerService } from './services/ManagerService';

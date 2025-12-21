@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
-import { Container, Paper, TextField, Button, Typography, Box, Alert, MenuItem, Link as MuiLink } from '@mui/material';
+import { Container, Paper, TextField, Button, Typography, Box, MenuItem, Link as MuiLink } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
+import { AuthService, ApiError, UserRole } from '../client';
+import { useUI } from '../context/UIContext';
 
 const RegisterPage: React.FC = () => {
     const navigate = useNavigate();
+    const { showLoader, hideLoader, showToast } = useUI();
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         password: '',
-        role: 'CUSTOMER',
+        role: UserRole.CUSTOMER,
         phone: ''
     });
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -21,36 +22,41 @@ const RegisterPage: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
 
         // Validation
         if (!formData.name || !formData.email || !formData.password) {
-            setError('Please fill in all required fields.');
+            showToast({ type: 'warning', msg: 'Please fill in all required fields.' });
             return;
         }
 
-        setLoading(true);
-
         try {
-            const response = await fetch('http://localhost:3000/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+            showLoader();
+            const response = await AuthService.registerUser({
+                ...formData,
+                role: formData.role as UserRole
             });
 
-            const data = await response.json();
+            // Assuming the client throws on error, if we reach here it's arguably success.
+            // But let's check data struct if needed. Assuming void or data return.
+            // If the method returns CancelablePromise<...>, wait it.
 
-            if (!response.ok) {
+            const data = response as any;
+            if (data.status === false) { // Check if specific status field says false
                 throw new Error(data.message || 'Registration failed');
             }
 
             // Success
-            alert('Registration Successful! Please Login.');
+            showToast({ type: 'success', msg: 'Registration Successful! Please Login.' });
             navigate('/login');
         } catch (err: any) {
-            setError(err.message);
+            console.error(err);
+            if (err instanceof ApiError) {
+                showToast({ type: 'error', msg: err.body?.message || err.message || 'Registration failed' });
+            } else {
+                showToast({ type: 'error', msg: err.message || 'Registration failed' });
+            }
         } finally {
-            setLoading(false);
+            hideLoader();
         }
     };
 
@@ -89,7 +95,7 @@ const RegisterPage: React.FC = () => {
                     Join us to book your perfect stay
                 </Typography>
 
-                {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
+
 
                 <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
                     <TextField
@@ -141,8 +147,8 @@ const RegisterPage: React.FC = () => {
                         margin="normal"
                         helperText="Select 'Hotel Manager' if you want to host."
                     >
-                        <MenuItem value="CUSTOMER">Customer (I want to book)</MenuItem>
-                        <MenuItem value="HOTEL_MANAGER">Hotel Manager (I want to host)</MenuItem>
+                        <MenuItem value={UserRole.CUSTOMER}>Customer (I want to book)</MenuItem>
+                        <MenuItem value={UserRole.HOTEL_MANAGER}>Hotel Manager (I want to host)</MenuItem>
                     </TextField>
 
                     <Button
@@ -151,10 +157,9 @@ const RegisterPage: React.FC = () => {
                         variant="contained"
                         color="secondary"
                         size="large"
-                        disabled={loading}
                         sx={{ mt: 3, mb: 2, py: 1.5, fontWeight: 'bold' }}
                     >
-                        {loading ? 'Creating Account...' : 'Sign Up'}
+                        Sign Up
                     </Button>
 
                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>

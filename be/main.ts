@@ -4,24 +4,21 @@ import swaggerUi from 'swagger-ui-express';
 import yaml from 'js-yaml';
 import fs from 'fs';
 import path from 'path';
-import cors from 'cors'; // Important for automation and frontend
+import cors from 'cors';
 import prisma from './src/lib/prisma';
 
 const app: Express = express();
 const port = 3000;
 
-// Enable CORS
 app.use(cors());
 app.use(express.json());
 
-// Load OpenAPI spec
 const openapiPath = path.join(__dirname, 'openapi.yaml');
 const swaggerDocument = yaml.load(fs.readFileSync(openapiPath, 'utf8')) as Record<string, any>;
 
-// Swagger UI
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// --- ROUTES ---
 import routes from './src/routes';
 app.use(routes);
 
@@ -45,5 +42,6 @@ async function main() {
     }
 }
 
+
+// Trigger restart (Optimized Manager Query)
 main();
-// Force restart

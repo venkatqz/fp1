@@ -1,20 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { Container, Box, Typography, Avatar, Divider } from '@mui/material';
+import React from 'react';
+import { Container, Box, Typography, Avatar, Divider, Chip } from '@mui/material';
 import BookedHotels from '../components/BookedHotels';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Navigate } from 'react-router-dom';
 
 const ProfilePage: React.FC = () => {
-    const navigate = useNavigate();
-    const [user, setUser] = useState<any>(null);
+    const { user, isAuthenticated } = useAuth();
 
-    useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (!storedUser) {
-            navigate('/login');
-            return;
-        }
-        setUser(JSON.parse(storedUser));
-    }, [navigate]);
+    if (!isAuthenticated || !user) {
+        return <Navigate to="/login" replace />;
+    }
 
     if (!user) return null;
 
@@ -45,5 +40,4 @@ const ProfilePage: React.FC = () => {
 
 export default ProfilePage;
 
-// Helper component for Chip
-import { Chip } from '@mui/material';
+

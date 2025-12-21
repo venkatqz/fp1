@@ -13,7 +13,7 @@ import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import LocalBarIcon from '@mui/icons-material/LocalBar';
 import SpaIcon from '@mui/icons-material/Spa';
-import { HotelsService } from '../client';
+import { CustomerService } from '../client';
 import BookingDialog from '../components/BookingDialog';
 
 // Helper to map string amenities to icons
@@ -32,8 +32,10 @@ const HotelDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const location = useLocation();
-    const [hotel, setHotel] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+
+    // Initialize state from location (Search Results) if available
+    const [hotel, setHotel] = useState<any>(location.state?.hotel || null);
+    const [loading, setLoading] = useState(!location.state?.hotel);
     const [error, setError] = useState('');
 
     // Booking State
@@ -41,15 +43,64 @@ const HotelDetailsPage: React.FC = () => {
     const [openBooking, setOpenBooking] = useState(false);
 
     useEffect(() => {
+        // If we already have hotel data from state, we might need to normalize it
+        if (hotel) {
+            let needsUpdate = false;
+            let updatedHotel = { ...hotel };
+
+            // 1. Map 'rooms_details' to 'rooms'
+            if (!hotel.rooms && hotel.rooms_details) {
+                const mappedRooms = hotel.rooms_details.map((rd: any, index: number) => {
+                    let roomAmenities = rd.amenities || [];
+                    if (typeof roomAmenities === 'string') {
+                        try {
+                            roomAmenities = JSON.parse(roomAmenities);
+                        } catch (e) {
+                            roomAmenities = [];
+                        }
+                    }
+
+                    return {
+                        id: rd.room_name || `room-${index}`,
+                        name: rd.room_name,
+                        price: rd.price,
+                        amenities: Array.isArray(roomAmenities) ? roomAmenities : [],
+                        available: rd.available_rooms,
+                        capacity: { adults: 2, children: 1 }, // Default
+                        totalInventory: 0
+                    };
+                });
+                updatedHotel.rooms = mappedRooms;
+                needsUpdate = true;
+            }
+
+            // 2. Map 'hotel_amenities' (CSV string) to 'amenities' (Object Array)
+            if ((!updatedHotel.amenities || updatedHotel.amenities.length === 0) && updatedHotel.hotel_amenities) {
+                const amenityList = typeof updatedHotel.hotel_amenities === 'string'
+                    ? updatedHotel.hotel_amenities.split(',').filter((s: string) => s).map((s: string) => ({ name: s.trim() }))
+                    : [];
+                updatedHotel.amenities = amenityList;
+                needsUpdate = true;
+            }
+
+            if (needsUpdate) {
+                setHotel(updatedHotel);
+            }
+
+            setLoading(false);
+            return;
+        }
+
+        // Fallback: Fetch details if no state (Direct URL access)
         const fetchDetails = async () => {
             if (!id) return;
             try {
                 setLoading(true);
-                const response = await HotelsService.getHotelById(id);
+                const response = await CustomerService.getHotelById(id);
                 setHotel(response.data);
             } catch (err) {
                 console.error(err);
-                setError('Failed to load hotel details.');
+                setError('Failed to load hotel details. Please search again.');
             } finally {
                 setLoading(false);
             }

@@ -1,36 +1,55 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import SearchPage from './pages/SearchPage';
-import HomePage from './pages/HomePage';
-import HotelDetailsPage from './pages/HotelDetailsPage';
-import ManageHotelPage from './pages/ManageHotelPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import ProfilePage from './pages/ProfilePage';
+import SearchPage from './Pages/SearchPage';
+import HomePage from './Pages/HomePage';
+import HotelDetailsPage from './Pages/HotelDetailsPage';
+import ManageHotelPage from './Pages/ManageHotelPage';
+import ManagerDashboard from './Pages/ManagerDashboard';
+import LoginPage from './Pages/LoginPage';
+import RegisterPage from './Pages/RegisterPage';
+import ProfilePage from './Pages/ProfilePage';
 import { Box } from '@mui/material';
+import { AuthProvider } from './context/AuthContext';
+import { UIProvider } from './context/UIContext';
+import Toaster from './components/Reusable/Toaster';
+import GlobalLoader from './components/Reusable/GlobalLoader';
+import PublicRoute from './components/PublicRoute';
 
 function App() {
   return (
-    <Router>
-      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <UIProvider>
+      <Router>
+        <AuthProvider>
+          <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
-        <Navbar />
+            <Navbar />
 
-        <Box component="main" sx={{ flexGrow: 1 }}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/hotel/:id" element={<HotelDetailsPage />} />
-            <Route path="/admin/hotel/new" element={<ManageHotelPage />} />
-            <Route path="/admin/hotel/:id" element={<ManageHotelPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-          </Routes>
-        </Box>
+            <Box component="main" sx={{ flexGrow: 1 }}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/search" element={<SearchPage />} />
+                <Route path="/hotel/:id" element={<HotelDetailsPage />} />
+                <Route path="/manager/dashboard" element={<ManagerDashboard />} />
+                <Route path="/admin/hotel/new" element={<ManageHotelPage />} />
+                <Route path="/admin/hotel/:id" element={<ManageHotelPage />} />
 
-      </Box>
-    </Router>
+                {/* Routes only for non-authenticated users */}
+                <Route element={<PublicRoute />}>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                </Route>
+
+                <Route path="/profile" element={<ProfilePage />} />
+              </Routes>
+            </Box>
+
+            <GlobalLoader />
+            <Toaster />
+
+          </Box>
+        </AuthProvider>
+      </Router>
+    </UIProvider>
   );
 }
 

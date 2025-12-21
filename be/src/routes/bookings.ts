@@ -8,7 +8,5 @@ router.use(authenticate);
 
 router.post('/intent', BookingsController.createBookingIntent);
 router.post('/confirm', BookingsController.confirmBooking);
-router.get('/my-bookings', BookingsController.getUserBookings);
-router.put('/:id/cancel', BookingsController.cancelBooking);
 
 export default router;

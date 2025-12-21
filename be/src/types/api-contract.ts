@@ -38,44 +38,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/refresh-token": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Refresh Access Token */
-        post: operations["refreshToken"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/hotels": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Search and List Hotels
-         * @description Search for hotels with filtering options. Returns a paginated list of lightweight hotel objects.
-         */
-        get: operations["searchHotels"];
-        put?: never;
-        /** Add a new Hotel (Admin/Manager only) */
-        post: operations["addHotel"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/hotels/search": {
         parameters: {
             query?: never;
@@ -96,18 +58,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/hotels/{id}": {
+    "/hotels/my-hotels": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get Hotel Details with Room Types
-         * @description Returns full hotel details along with embedded room types and their availability.
-         */
-        get: operations["getHotelById"];
+        /** Get Hotels Managed by Current User */
+        get: operations["getMyHotels"];
         put?: never;
         post?: never;
         delete?: never;
@@ -116,15 +75,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/hotels/{id}/rooms": {
+    "/hotels/create": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get available rooms for a hotel */
-        get: operations["getHotelRooms"];
+        get?: never;
+        put?: never;
+        /** Create or Update a Hotel (Upsert) */
+        post: operations["createHotel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hotels/room-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create or Update a Room Type (Upsert) */
+        post: operations["createRoomType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hotels/room-types/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a Room Type */
+        delete: operations["deleteRoomType"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hotels/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a Hotel */
+        delete: operations["deleteHotel"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hotels/manager/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get All Bookings for a Hotel (Manager Only) */
+        get: operations["getManagerBookings"];
         put?: never;
         post?: never;
         delete?: never;
@@ -191,26 +218,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/early-access-users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create Early Access User
-         * @description Registers a new user for early access.
-         */
-        post: operations["createEarlyAccessUser"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -234,7 +241,6 @@ export interface components {
             name: string;
             /** Format: email */
             email: string;
-            passwordHash: string;
             role: components["schemas"]["UserRole"];
             phone?: string;
         };
@@ -252,7 +258,7 @@ export interface components {
             rating: number;
             lowestPrice?: number | null;
             images: string[];
-            amenities: components["schemas"]["Amenity"][];
+            amenities: string[];
             rooms?: components["schemas"]["RoomType"][];
         };
         RoomType: {
@@ -263,7 +269,7 @@ export interface components {
             capacity: number;
             totalInventory: number;
             images: string[];
-            amenities: components["schemas"]["Amenity"][];
+            amenities: string[];
         };
         Booking: {
             id: string;
@@ -384,151 +390,6 @@ export interface operations {
             };
         };
     };
-    refreshToken: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    refreshToken: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Token refreshed successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        status?: boolean;
-                        statusCode?: number;
-                        message?: string;
-                        data?: {
-                            accessToken?: string;
-                            refreshToken?: string;
-                        };
-                    };
-                };
-            };
-            /** @description Refresh token required */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Invalid or expired refresh token */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    searchHotels: {
-        parameters: {
-            query?: {
-                /** @description Generic search term (name, city, etc.) */
-                query?: string;
-                /** @description Filter by location */
-                city?: string;
-                /** @description Check-in date (YYYY-MM-DD) */
-                checkIn?: string;
-                /** @description Check-out date (YYYY-MM-DD) */
-                checkOut?: string;
-                /** @description Number of guests */
-                guests?: number;
-                sortBy?: "price_low" | "price_high" | "rating";
-                minPrice?: number;
-                maxPrice?: number;
-                page?: number;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of hotels found */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        status?: boolean;
-                        statusCode?: number;
-                        message?: string;
-                        data?: {
-                            data?: {
-                                id?: string;
-                                name?: string;
-                                city?: string;
-                                lowestPrice?: number;
-                                images?: string[];
-                                rating?: number;
-                            }[];
-                            meta?: {
-                                total?: number;
-                                page?: number;
-                                limit?: number;
-                            };
-                        };
-                    };
-                };
-            };
-            /** @description Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    addHotel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Hotel"];
-            };
-        };
-        responses: {
-            /** @description Hotel created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        status?: boolean;
-                        statusCode?: number;
-                        message?: string;
-                        data?: components["schemas"]["Hotel"];
-                    };
-                };
-            };
-        };
-    };
     searchAvailableHotels: {
         parameters: {
             query: {
@@ -617,6 +478,13 @@ export interface operations {
                     };
                 };
             };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Server Error */
             500: {
                 headers: {
@@ -632,7 +500,95 @@ export interface operations {
             };
         };
     };
-    getHotelById: {
+    getMyHotels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of hotels */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status?: boolean;
+                        statusCode?: number;
+                        message?: string;
+                        data?: components["schemas"]["Hotel"][];
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createHotel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Hotel"];
+            };
+        };
+        responses: {
+            /** @description Hotel Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status?: boolean;
+                        message?: string;
+                        data?: components["schemas"]["Hotel"];
+                    };
+                };
+            };
+        };
+    };
+    createRoomType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoomType"];
+            };
+        };
+        responses: {
+            /** @description Room Type Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status?: boolean;
+                        message?: string;
+                        data?: components["schemas"]["RoomType"];
+                    };
+                };
+            };
+        };
+    };
+    deleteRoomType: {
         parameters: {
             query?: never;
             header?: never;
@@ -643,7 +599,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Hotel details with rooms */
+            /** @description Room Type Deleted */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -653,17 +609,11 @@ export interface operations {
                         status?: boolean;
                         statusCode?: number;
                         message?: string;
-                        data?: components["schemas"]["Hotel"] & {
-                            rooms?: (components["schemas"]["RoomType"] & {
-                                /** @description Calculated availability for the dates */
-                                available?: number;
-                            })[];
-                        };
                     };
                 };
             };
-            /** @description Hotel not found */
-            404: {
+            /** @description Forbidden (Not a manager) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -673,7 +623,7 @@ export interface operations {
             };
         };
     };
-    getHotelRooms: {
+    deleteHotel: {
         parameters: {
             query?: never;
             header?: never;
@@ -684,7 +634,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description List of rooms */
+            /** @description Hotel Deleted */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -694,9 +644,68 @@ export interface operations {
                         status?: boolean;
                         statusCode?: number;
                         message?: string;
-                        data?: components["schemas"]["RoomType"][];
                     };
                 };
+            };
+            /** @description Forbidden (Not a manager) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getManagerBookings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of bookings with rich details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status?: boolean;
+                        statusCode?: number;
+                        message?: string;
+                        data?: {
+                            id?: string;
+                            hotelName?: string;
+                            status?: string;
+                            /** Format: date-time */
+                            checkIn?: string;
+                            /** Format: date-time */
+                            checkOut?: string;
+                            totalPrice?: number;
+                            guestName?: string;
+                            guestEmail?: string;
+                            guestPhone?: string;
+                            guests?: {
+                                name?: string;
+                                phone?: string;
+                                email?: string;
+                            }[];
+                            /** @description Summary string of rooms */
+                            rooms?: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Forbidden (Not a manager) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -717,6 +726,12 @@ export interface operations {
                     /** Format: date */
                     checkOut: string;
                     guests: number;
+                    paymentMode: components["schemas"]["PaymentMode"];
+                    guestDetails?: {
+                        name?: string;
+                        email?: string;
+                        phone?: string;
+                    }[];
                 };
             };
         };
@@ -768,7 +783,7 @@ export interface operations {
                         name?: string;
                         email?: string;
                         phone?: string;
-                    };
+                    }[];
                 };
             };
         };
@@ -819,68 +834,6 @@ export interface operations {
                         message?: string;
                         data?: components["schemas"]["Booking"][];
                     };
-                };
-            };
-        };
-    };
-    createEarlyAccessUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** Format: email */
-                    email: string;
-                    name: string;
-                    primaryUseCase: string;
-                    company?: string;
-                    role?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description User created successfully */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        status?: boolean;
-                        statusCode?: number;
-                        message?: string;
-                    };
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Conflict - Email already exists */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

@@ -1,10 +1,18 @@
 import prisma from '../lib/prisma';
+import { BookingRepository } from '../repositories/booking.repo';
+import { BookingStatus, PaymentMode } from '../enums';
+
 
 export const BookingService = {
     createIntent: async (data: any) => {
-        const { hotelId, roomTypeId, checkIn, checkOut, guests, paymentMode } = data;
+        const { hotelId, roomTypeId, rooms, checkIn, checkOut, guests, paymentMode, guestDetails } = data;
 
-        if (!hotelId || !roomTypeId || !checkIn || !checkOut || !guests) {
+        // Normalize requested rooms
+        const requestedRooms = (rooms && rooms.length > 0)
+            ? rooms
+            : (roomTypeId ? [{ roomTypeId, quantity: 1 }] : []);
+
+        if (!hotelId || requestedRooms.length === 0 || !checkIn || !checkOut || !guests) {
             throw new Error('Missing required fields');
         }
 
@@ -16,77 +24,83 @@ export const BookingService = {
             throw new Error('Check-out date must be after check-in date');
         }
 
+        const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+
         return await prisma.$transaction(async (tx) => {
-            // 1. Get Room Type & Capacity
-            const roomType = await tx.room_types.findUnique({
-                where: { id: roomTypeId }
-            });
+            let totalCapacity = 0;
+            let totalBookingPrice = 0;
+            const finalRoomsData = [];
 
-            if (!roomType) {
-                throw new Error('Room type not found');
-            }
+            let guestList: { name: string; phone: string; email?: string }[] = [];
 
-            // 2. Capacity Check
-            // Rule: Total Guests <= (Requested Rooms assumption: 1) * Capacity
-            // If user wants multiple rooms, valid logic would be needed. Assuming 1 room per booking for now.
-            if (guests > roomType.capacity) {
-                throw new Error(`Room capacity exceeded. Max guests: ${roomType.capacity}`);
-            }
+            for (const req of requestedRooms) {
+                const roomType = await tx.room_types.findUnique({
+                    where: { id: req.roomTypeId }
+                });
 
-            // 3. Availability Check (Concurrency Safe count)
-            // Count confirmed bookings OR pending holds that haven't expired
-            const activeBookings = await tx.bookings.count({
-                where: {
-                    room_type_id: roomTypeId,
-                    status: { in: ['CONFIRMED', 'PENDING_PAYMENT'] },
-                    // Date Overlap: (StartA <= EndB) and (EndA >= StartB)
-                    check_in: { lt: checkOutDate },
-                    check_out: { gt: checkInDate },
-                    // For pending, only count if NOT expired
-                    OR: [
-                        { status: 'CONFIRMED' },
-                        {
-                            status: 'PENDING_PAYMENT',
-                            expires_at: { gt: new Date() }
-                        }
-                    ]
+                if (!roomType) {
+                    throw new Error(`Room type ${req.roomTypeId} not found`);
                 }
-            });
 
-            if (activeBookings >= roomType.total_inventory) {
-                throw new Error('Room not available for selected dates');
+                const activeBookings = await BookingRepository.countActiveBookings(
+                    req.roomTypeId,
+                    checkInDate,
+                    checkOutDate,
+                    tx
+                );
+
+                const available = roomType.total_inventory - activeBookings;
+                const quantity = req.quantity || 1;
+
+                if (available < quantity) {
+                    throw new Error(`Room ${roomType.name} not available. Requested: ${quantity}, Available: ${available}`);
+                }
+
+                totalCapacity += (roomType.capacity * quantity);
+                const pricePerNight = Number(roomType.price);
+                totalBookingPrice += (pricePerNight * quantity * nights);
+
+                finalRoomsData.push({
+                    roomTypeId: roomType.id,
+                    quantity: quantity,
+                    price: pricePerNight
+                });
             }
 
-            // 4. Calculate Price
-            const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
-            // Ensure price is treated as number (Prisma returns Decimal)
-            const pricePerNight = Number(roomType.price);
-            const totalPrice = pricePerNight * nights; // Per room price, not per guest usually
+            if (guests > totalCapacity) {
+                throw new Error(`Room capacity exceeded. Max guests: ${totalCapacity}`);
+            }
 
-            // 5. Determine Payment Mode & Status
-            // Default to ONLINE if not provided
-            const mode = paymentMode || 'ONLINE';
-
-            // Fetch Payment Mode ID from DB
+            const mode = paymentMode || PaymentMode.ONLINE;
             const validMode = await tx.payment_modes.findFirst({
                 where: { name: mode }
             });
 
             const paymentModeId = validMode ? validMode.id : null;
-            // Note: If seeds aren't effectively run, this might be null. 
-            // Ideally we should throw if invalid mode, but for resilience we might allow null or fallback.
 
-            let initialStatus = 'PENDING_PAYMENT';
-            let expiresAt: Date | null = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+            let initialStatus = BookingStatus.PENDING_PAYMENT;
+            let expiresAt: Date | null = new Date(Date.now() + 15 * 60 * 1000);
             let paymentIntentId = '';
             let clientSecret = '';
+            // let guestList = []; (removed, aggregated earlier)
 
-            if (mode === 'PAY_AT_HOTEL') {
-                initialStatus = 'CONFIRMED';
-                expiresAt = null; // No expiry for confirmed
+            if (mode === PaymentMode.PAY_AT_HOTEL) {
+                if (!guestDetails || (Array.isArray(guestDetails) && guestDetails.length === 0)) {
+                    throw new Error('Guest details are required for Pay at Hotel');
+                }
+
+                // Normalize to array
+                guestList = Array.isArray(guestDetails) ? guestDetails : [guestDetails];
+
+                // Validate
+                for (const g of guestList) {
+                    if (!g.name || !g.phone) throw new Error('Guest name and phone are required');
+                }
+
+                initialStatus = BookingStatus.CONFIRMED;
+                expiresAt = null;
                 paymentIntentId = 'pay_at_hotel';
             } else {
-                // Mock Payment Intent (Stripe/Razorpay would go here)
                 const tempId = `bk_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
                 paymentIntentId = `pi_${tempId}`;
                 clientSecret = `secret_${tempId}`;
@@ -94,26 +108,25 @@ export const BookingService = {
 
             const bookingId = `bk_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-            await tx.bookings.create({
-                data: {
-                    id: bookingId,
-                    hotel_id: hotelId,
-                    room_type_id: roomTypeId,
-                    payment_mode_id: paymentModeId,
-                    check_in: checkInDate,
-                    check_out: checkOutDate,
-                    total_price: totalPrice,
-                    status: initialStatus,
-                    expires_at: expiresAt,
-                    user_id: data.userId || null,
-                }
-            });
+            await BookingRepository.create({
+                id: bookingId,
+                hotel_id: hotelId,
+                payment_mode_id: paymentModeId,
+                check_in: checkInDate,
+                check_out: checkOutDate,
+                total_price: totalBookingPrice as any,
+                status: initialStatus,
+                expires_at: expiresAt,
+                user_id: data.userId || null,
+                rooms: finalRoomsData,
+                guests: guestList
+            }, tx);
 
             return {
                 bookingId,
                 paymentIntentId,
                 clientSecret,
-                totalPrice,
+                totalPrice: totalBookingPrice,
                 currency: 'INR',
                 expiresAt
             };
@@ -128,19 +141,17 @@ export const BookingService = {
         }
 
         return await prisma.$transaction(async (tx) => {
-            const booking = await tx.bookings.findUnique({
-                where: { id: bookingId }
-            });
+            const booking = await BookingRepository.findById(bookingId, tx);
 
             if (!booking) {
                 throw new Error('Booking not found');
             }
 
-            if (booking.status === 'CONFIRMED') {
+            if (booking.status === BookingStatus.CONFIRMED) {
                 return booking; // Already confirmed
             }
 
-            if (booking.status !== 'PENDING_PAYMENT') {
+            if (booking.status !== BookingStatus.PENDING_PAYMENT) {
                 throw new Error('Invalid booking status');
             }
 
@@ -149,52 +160,26 @@ export const BookingService = {
                 throw new Error('Booking expired');
             }
 
-            // Create Guest Details (Linked to Booking via booking_id)
-            const guestId = `g_${Date.now()}`;
-            await tx.guest_details.create({
-                data: {
-                    id: guestId,
-                    name: guestDetails.name,
-                    phone: guestDetails.phone || '',
-                    booking_id: bookingId
-                }
-            });
+            // Create Guest Details (Multiple)
+            let guests = [];
+            if (guestDetails) {
+                guests = Array.isArray(guestDetails) ? guestDetails : [guestDetails];
+            } else {
+                // If no guest details provided but required? 
+                // Assuming payload mandates it or we use user profile. 
+            }
 
-            // Determine Payment Mode ID (assuming table exists or basic string)
-            // Since schema has payment_modes relation, we need to fetch/connect it.
-            // For MVP, if we don't have seeds, this might fail. Let's assume we pass ID or connect by name.
-            // Safe fallback: Just Update status.
-
-            const status = 'CONFIRMED';
-
-            const updated = await tx.bookings.update({
-                where: { id: bookingId },
-                data: {
-                    status: status,
-                    expires_at: null, // Clear expiry
-                    // guest_details_id removed
-                    transaction_id: paymentIntentId, // Store stripe ID
-                    // Should link payment mode here too ideally
-                }
-            });
+            // Update Booking Status and Insert Guests
+            const updated = await BookingRepository.update(bookingId, {
+                status: BookingStatus.CONFIRMED,
+                expires_at: null,
+                transaction_id: paymentIntentId,
+                guests: guests // Pass guests to repository update to insert them
+            }, tx);
 
             return updated;
         });
     },
 
-    getUserBookings: async () => {
-        // This needs user context passed in, usually
-        return prisma.bookings.findMany();
-    },
 
-    cancelBooking: async (id: string) => {
-        const booking = await prisma.bookings.findUnique({ where: { id } });
-        if (!booking) {
-            throw new Error('Booking not found');
-        }
-        return prisma.bookings.update({
-            where: { id },
-            data: { status: 'CANCELLED' }
-        });
-    }
 };

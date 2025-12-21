@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     AppBar,
@@ -16,6 +16,8 @@ import {
     MenuItem
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import { useAuth } from '../context/AuthContext';
+import { useUI } from '../context/UIContext';
 
 // --- Constants ---
 
@@ -29,7 +31,8 @@ const Navbar: React.FC = () => {
     const navigate = useNavigate();
 
     // --- State for Search ---
-    // --- State for Search ---
+    const { user, logout } = useAuth();
+    const { isLoading } = useUI();
     const [searchQuery, setSearchQuery] = useState<string>('');
 
     // Default Dates
@@ -40,34 +43,10 @@ const Navbar: React.FC = () => {
     const [checkOut, setCheckOut] = useState<string>(tomorrow);
     const [guests, setGuests] = useState<string>('1');
 
-    const [user, setUser] = useState<any>(null);
+    const [isCheckInFocused, setIsCheckInFocused] = useState(false);
+    const [isCheckOutFocused, setIsCheckOutFocused] = useState(false);
+
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-
-    const checkUser = () => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser && storedUser !== "undefined") {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error("Failed to parse user from local storage in Navbar", e);
-                localStorage.removeItem('user');
-                setUser(null);
-            }
-        } else {
-            setUser(null);
-        }
-    };
-
-    useEffect(() => {
-        checkUser();
-        // Listen for storage events (login/logout from other tabs/pages)
-        window.addEventListener('storage', checkUser);
-        return () => window.removeEventListener('storage', checkUser);
-    }, []);
-
-    // --- Effects ---
-    // Debounce removed for auto-navigation to allow full form filling
-
 
     // --- Event Handlers ---
     const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,10 +62,7 @@ const Navbar: React.FC = () => {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.dispatchEvent(new Event("storage"));
-        setUser(null);
+        logout();
         handleMenuClose();
         navigate('/login');
     };
@@ -117,114 +93,107 @@ const Navbar: React.FC = () => {
                         </Typography>
                     </Box>
 
-                    {/* 2. Composite Search Section (Centered) */}
-                    <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', maxWidth: '800px' }}>
-                        <Box
-                            sx={{
-                                position: 'relative',
-                                borderRadius: 100, // Pill shape
-                                backgroundColor: alpha(theme.palette.common.black, 0.05),
-                                border: `1px solid ${alpha(theme.palette.common.black, 0.1)}`,
-                                '&:hover': {
-                                    backgroundColor: alpha(theme.palette.common.black, 0.08),
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                },
-                                width: '100%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                transition: 'all 0.2s',
-                                p: 0.5,
-                            }}
-                        >
-                            {/* Location Input */}
-                            <InputBase
-                                placeholder="Where to?"
-                                value={searchQuery}
-                                onChange={handleSearchInputChange}
-                                sx={{ ml: 2, flex: 1.5, fontWeight: 500 }}
-                                startAdornment={<SearchIcon color="action" sx={{ mr: 1 }} />}
-                            />
-
-                            {/* Divider */}
-                            <Box sx={{ width: '1px', height: 24, bgcolor: 'divider', mx: 1 }} />
-
-                            {/* Check In */}
-                            <InputBase
-                                type="text"
-                                placeholder="Check In"
-                                value={checkIn ? checkIn.split('-').reverse().join('/') : ''}
-                                onFocus={(e) => {
-                                    (e.currentTarget as HTMLInputElement).type = "date";
-                                    // When switching to date input, we need the standard YYYY-MM-DD
-                                    (e.currentTarget as HTMLInputElement).value = checkIn;
-                                }}
-                                onBlur={(e) => {
-                                    (e.currentTarget as HTMLInputElement).type = "text";
-                                    // When switching to text, we format it nicely
-                                    // This is visual only, React state 'checkIn' remains YYYY-MM-DD
-                                }}
-                                onChange={(e) => setCheckIn(e.target.value)}
-                                sx={{ flex: 1, '& input': { cursor: 'pointer' } }}
-                                inputProps={{ min: new Date().toISOString().split('T')[0] }}
-                            />
-
-                            {/* Divider */}
-                            <Box sx={{ width: '1px', height: 24, bgcolor: 'divider', mx: 1 }} />
-
-                            {/* Check Out */}
-                            <InputBase
-                                type="text"
-                                placeholder="Check Out"
-                                value={checkOut ? checkOut.split('-').reverse().join('/') : ''}
-                                onFocus={(e) => {
-                                    (e.currentTarget as HTMLInputElement).type = "date";
-                                    (e.currentTarget as HTMLInputElement).value = checkOut;
-                                }}
-                                onBlur={(e) => (e.currentTarget as HTMLInputElement).type = "text"}
-                                onChange={(e) => setCheckOut(e.target.value)}
-                                sx={{ flex: 1, '& input': { cursor: 'pointer' } }}
-                                inputProps={{ min: checkIn || new Date().toISOString().split('T')[0] }}
-                            />
-
-                            {/* Divider */}
-                            <Box sx={{ width: '1px', height: 24, bgcolor: 'divider', mx: 1 }} />
-
-                            {/* Guests */}
-                            <InputBase
-                                type="number"
-                                placeholder="Guests"
-                                value={guests}
-                                inputProps={{ min: 1 }}
-                                onChange={(e) => setGuests(e.target.value)}
-                                sx={{ flex: 0.8, maxWidth: '80px' }}
-                            />
-
-                            {/* Search Button */}
+                    {/* 2. Composite Search Section (Centered) - Only visible when logged in */}
+                    {user && (
+                        <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', maxWidth: '800px' }}>
                             <Box
                                 sx={{
-                                    ml: 1,
-                                    bgcolor: theme.palette.primary.main,
-                                    borderRadius: '50%',
-                                    p: 1,
-                                    color: 'white',
-                                    cursor: 'pointer',
+                                    position: 'relative',
+                                    borderRadius: 100, // Pill shape
+                                    backgroundColor: alpha(theme.palette.common.black, 0.05),
+                                    border: `1px solid ${alpha(theme.palette.common.black, 0.1)}`,
+                                    '&:hover': {
+                                        backgroundColor: alpha(theme.palette.common.black, 0.08),
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                    },
+                                    width: '100%',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
-                                onClick={() => {
-                                    const params = new URLSearchParams();
-                                    if (searchQuery) params.set('query', searchQuery);
-                                    if (checkIn) params.set('checkIn', checkIn);
-                                    if (checkOut) params.set('checkOut', checkOut);
-                                    if (guests) params.set('guests', guests);
-                                    navigate(`/search?${params.toString()}`);
+                                    transition: 'all 0.2s',
+                                    p: 0.5,
                                 }}
                             >
-                                <SearchIcon fontSize="small" />
+                                {/* Location Input */}
+                                <InputBase
+                                    placeholder="Where to?"
+                                    value={searchQuery}
+                                    onChange={handleSearchInputChange}
+                                    sx={{ ml: 2, flex: 1.5, fontWeight: 500 }}
+                                    startAdornment={<SearchIcon color="action" sx={{ mr: 1 }} />}
+                                />
+
+                                {/* Divider */}
+                                <Box sx={{ width: '1px', height: 24, bgcolor: 'divider', mx: 1 }} />
+
+                                {/* Check In */}
+                                <InputBase
+                                    type={isCheckInFocused ? "date" : "text"}
+                                    placeholder="Check In"
+                                    value={isCheckInFocused ? checkIn : (checkIn ? checkIn.split('-').reverse().join('/') : '')}
+                                    onFocus={() => setIsCheckInFocused(true)}
+                                    onBlur={() => setIsCheckInFocused(false)}
+                                    onChange={(e) => setCheckIn(e.target.value)}
+                                    sx={{ flex: 1, '& input': { cursor: 'pointer' } }}
+                                    inputProps={{ min: new Date().toISOString().split('T')[0] }}
+                                />
+
+                                {/* Divider */}
+                                <Box sx={{ width: '1px', height: 24, bgcolor: 'divider', mx: 1 }} />
+
+                                {/* Check Out */}
+                                <InputBase
+                                    type={isCheckOutFocused ? "date" : "text"}
+                                    placeholder="Check Out"
+                                    value={isCheckOutFocused ? checkOut : (checkOut ? checkOut.split('-').reverse().join('/') : '')}
+                                    onFocus={() => setIsCheckOutFocused(true)}
+                                    onBlur={() => setIsCheckOutFocused(false)}
+                                    onChange={(e) => setCheckOut(e.target.value)}
+                                    sx={{ flex: 1, '& input': { cursor: 'pointer' } }}
+                                    inputProps={{ min: checkIn || new Date().toISOString().split('T')[0] }}
+                                />
+
+                                {/* Divider */}
+                                <Box sx={{ width: '1px', height: 24, bgcolor: 'divider', mx: 1 }} />
+
+                                {/* Guests */}
+                                <InputBase
+                                    type="number"
+                                    placeholder="Guests"
+                                    value={guests}
+                                    inputProps={{ min: 1 }}
+                                    onChange={(e) => setGuests(e.target.value)}
+                                    sx={{ flex: 0.8, maxWidth: '80px' }}
+                                />
+
+                                {/* Search Button */}
+                                <Box
+                                    sx={{
+                                        ml: 1,
+                                        bgcolor: isLoading ? 'action.disabled' : theme.palette.primary.main,
+                                        borderRadius: '50%',
+                                        p: 1,
+                                        color: 'white',
+                                        cursor: isLoading ? 'default' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        pointerEvents: isLoading ? 'none' : 'auto'
+                                    }}
+                                    onClick={() => {
+                                        if (isLoading) return; // Prevent spamming
+                                        const params = new URLSearchParams();
+                                        if (searchQuery) params.set('query', searchQuery);
+                                        if (checkIn) params.set('checkIn', checkIn);
+                                        if (checkOut) params.set('checkOut', checkOut);
+                                        if (guests) params.set('guests', guests);
+                                        navigate(`/search?${params.toString()}`);
+                                    }}
+                                >
+                                    <SearchIcon fontSize="small" />
+                                </Box>
                             </Box>
                         </Box>
-                    </Box>
+                    )}
 
                     {/* 3. Actions Section (Right) */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -252,8 +221,8 @@ const Navbar: React.FC = () => {
                                         My Profile
                                     </MenuItem>
                                     {user.role === 'HOTEL_MANAGER' && (
-                                        <MenuItem onClick={() => { handleMenuClose(); navigate('/admin/hotel/new'); }}>
-                                            Add Hotel
+                                        <MenuItem onClick={() => { handleMenuClose(); navigate('/manager/dashboard'); }}>
+                                            Dashboard
                                         </MenuItem>
                                     )}
                                     <MenuItem onClick={handleLogout}>Logout</MenuItem>

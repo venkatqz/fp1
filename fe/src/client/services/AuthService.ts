@@ -68,34 +68,4 @@ export class AuthService {
             },
         });
     }
-    /**
-     * Refresh Access Token
-     * @param requestBody
-     * @returns any Token refreshed successfully
-     * @throws ApiError
-     */
-    public static refreshToken(
-        requestBody: {
-            refreshToken: string;
-        },
-    ): CancelablePromise<{
-        status?: boolean;
-        statusCode?: number;
-        message?: string;
-        data?: {
-            accessToken?: string;
-            refreshToken?: string;
-        };
-    }> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/auth/refresh-token',
-            body: requestBody,
-            mediaType: 'application/json',
-            errors: {
-                400: `Refresh token required`,
-                401: `Invalid or expired refresh token`,
-            },
-        });
-    }
 }

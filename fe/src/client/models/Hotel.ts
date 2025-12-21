@@ -2,7 +2,6 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { Amenity } from './Amenity';
 import type { RoomType } from './RoomType';
 export type Hotel = {
     id: string;
@@ -13,7 +12,7 @@ export type Hotel = {
     rating: number;
     lowestPrice?: number | null;
     images: Array<string>;
-    amenities: Array<Amenity>;
+    amenities: Array<string>;
     rooms?: Array<RoomType>;
 };
 

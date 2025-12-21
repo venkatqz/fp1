@@ -4,6 +4,7 @@ import EventIcon from '@mui/icons-material/Event';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CancelIcon from '@mui/icons-material/Cancel';
+import { BookingsService } from '../client/services/BookingsService';
 
 const BookedHotels: React.FC = () => {
     const [bookings, setBookings] = useState<any[]>([]);
@@ -20,16 +21,13 @@ const BookedHotels: React.FC = () => {
         fetchBookings();
     }, []);
 
+
+
     const fetchBookings = async () => {
         try {
-            const response = await fetch('http://localhost:3000/bookings/my-bookings');
-            const data = await response.json();
-
-            if (Array.isArray(data)) {
-                setBookings(data);
-            } else if (data && Array.isArray(data.data)) {
-                // Check if wrapped in ApiResponse
-                setBookings(data.data);
+            const response = await BookingsService.getUserBookings();
+            if (response.data) {
+                setBookings(response.data);
             } else {
                 setBookings([]);
             }
@@ -60,8 +58,12 @@ const BookedHotels: React.FC = () => {
         if (!selectedBooking) return;
 
         try {
+            const token = localStorage.getItem('token');
             const response = await fetch(`http://localhost:3000/bookings/${selectedBooking.id}/cancel`, {
                 method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
             if (response.ok) {

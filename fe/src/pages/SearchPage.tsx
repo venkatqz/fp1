@@ -4,25 +4,33 @@ import { useSearchParams, Link } from 'react-router-dom';
 import {
     Box,
     Container,
-    Grid,
     Typography,
-    CircularProgress,
     Alert,
     Pagination,
-    Stack,
     Button,
+    TablePagination,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
+    type SelectChangeEvent,
 } from '@mui/material';
-import HotelCard from '../components/HotelCard';
-import { HotelsService, ApiError } from '../client';
+import HotelList from '../components/HotelList';
+import { CustomerService, ApiError } from '../client';
 import type { Hotel } from '../client/models/Hotel';
 
+import { useUI } from '../context/UIContext';
+// ...
 export default function SearchPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [hotels, setHotels] = useState<Hotel[]>([]);
-    const [loading, setLoading] = useState(false);
+    // Removed local loading state to test GlobalLoader
+    const { showLoader, hideLoader, showToast } = useUI();
     const [error, setError] = useState('');
     const [authError, setAuthError] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     // Read URL params
     const search = searchParams.get('search') || '';
@@ -35,46 +43,45 @@ export default function SearchPage() {
 
     useEffect(() => {
         fetchHotels();
-    }, [searchParams]);
+    }, [searchParams, rowsPerPage]);
 
     const fetchHotels = async () => {
         try {
-            setLoading(true);
+            showLoader();
             setError('');
             setAuthError(false);
 
-            // Use HotelsService for /hotels/search endpoint
-            // Provide defaults for dates if missing to ensure availability check works
+
             const today = new Date().toISOString().split('T')[0];
             const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
-            const response = await HotelsService.searchAvailableHotels(
+            const response = await CustomerService.searchAvailableHotels(
                 queryParam || '',
                 checkIn || today,
                 checkOut || tomorrow,
                 guests || 1,
                 (sortBy as any) || 'rating',
                 page,
-                12
+                rowsPerPage
             );
 
-            // Cast response to any to handle structure mismatch (generated type vs actual backend return)
             const result = response as any;
 
             if (result.status && result.data) {
-                // Backend returns { data: { data: [...], meta: ... } }
                 if (result.data.data && Array.isArray(result.data.data)) {
                     setHotels(result.data.data);
                     const total = result.data.meta?.total || 0;
-                    setTotalPages(Math.ceil(total / 12));
+                    setTotalCount(total);
+                    setTotalPages(Math.ceil(total / rowsPerPage));
                 } else if (Array.isArray(result.data)) {
-                    // Fallback for simple array
                     setHotels(result.data);
+                    setTotalCount(result.data.length);
                     setTotalPages(1);
                 }
             } else {
                 console.warn('Response format unexpected:', result);
                 setHotels([]);
+                showToast({ type: 'warning', msg: 'Unexpected response format' });
             }
 
         } catch (err) {
@@ -82,11 +89,13 @@ export default function SearchPage() {
 
             if (err instanceof ApiError && err.status === 401) {
                 setAuthError(true);
+                showToast({ type: 'error', msg: 'Please login to search' });
             } else {
                 setError('Failed to fetch hotels. Is the backend running?');
+                showToast({ type: 'error', msg: 'Failed to fetch hotels' });
             }
         } finally {
-            setLoading(false);
+            hideLoader();
         }
     };
 
@@ -98,6 +107,20 @@ export default function SearchPage() {
         window.scrollTo(0, 0);
     };
 
+    const handleTablePageChange = (_: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('page', String(newPage + 1)); // Convert 0-based to 1-based
+        setSearchParams(newParams);
+        window.scrollTo(0, 0);
+    };
+
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('page', '1');
+        setSearchParams(newParams);
+    };
+
     return (
         <Container maxWidth="lg" sx={{ py: 4 }}>
             {/* Search Header - REMOVED local search bar, using Navbar one */}
@@ -107,21 +130,25 @@ export default function SearchPage() {
                     {queryParam ? `Results for "${queryParam}"` : 'All Hotels'}
                 </Typography>
 
-                <Box>
-                    <Typography variant="caption" sx={{ mr: 1 }}>Sort By:</Typography>
-                    <select
-                        style={{ padding: '8px', borderRadius: '4px' }}
-                        value={sortBy || 'rating'}
-                        onChange={(e) => {
-                            const newParams = new URLSearchParams(searchParams);
-                            newParams.set('sortBy', e.target.value);
-                            setSearchParams(newParams);
-                        }}
-                    >
-                        <option value="rating">Rating</option>
-                        <option value="price_low">Price: Low to High</option>
-                        <option value="price_high">Price: High to Low</option>
-                    </select>
+                <Box sx={{ minWidth: 200 }}>
+                    <FormControl fullWidth size="small">
+                        <InputLabel id="sort-by-label">Sort By</InputLabel>
+                        <Select
+                            labelId="sort-by-label"
+                            id="sort-by-select"
+                            value={sortBy || 'rating'}
+                            label="Sort By"
+                            onChange={(e: SelectChangeEvent) => {
+                                const newParams = new URLSearchParams(searchParams);
+                                newParams.set('sortBy', e.target.value as string);
+                                setSearchParams(newParams);
+                            }}
+                        >
+                            <MenuItem value="rating">Rating</MenuItem>
+                            <MenuItem value="price_low">Price: Low to High</MenuItem>
+                            <MenuItem value="price_high">Price: High to Low</MenuItem>
+                        </Select>
+                    </FormControl>
                 </Box>
             </Box>
 
@@ -146,31 +173,15 @@ export default function SearchPage() {
             {/* Generic Error State */}
             {error && !authError && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-            {/* Loading State */}
-            {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-                    <CircularProgress />
-                </Box>
-            ) : !authError && (
+            {/* Loading State Removed - Using GlobalLoader */}
+            {!authError && (
                 <>
-                    {/* Results Grid */}
-                    <Grid container spacing={3}>
-                        {Array.isArray(hotels) && hotels.map((hotel) => (
-                            <Grid item xs={12} sm={6} md={4} key={hotel.id}>
-                                {/* 
-                  Mapping API Hotel to the Props expected by HotelCard via 'any' 
-                  or ensuring HotelCard matches the API type.
-                  For now, we pass the API object directly.
-                */}
-                                <HotelCard
-                                    hotel={hotel}
-                                />
-                            </Grid>
-                        ))}
-                    </Grid>
+                    {/* Results Grid - Now Reusable! */}
+                    <HotelList hotels={hotels} viewMode="grid" />
+
 
                     {/* Empty State */}
-                    {!loading && hotels.length === 0 && (
+                    {hotels.length === 0 && (
                         <Typography variant="body1" sx={{ mt: 4, textAlign: 'center' }}>
                             No hotels found. Try a different search.
                         </Typography>
@@ -178,15 +189,32 @@ export default function SearchPage() {
 
                     {/* Pagination */}
                     {hotels.length > 0 && (
-                        <Stack spacing={2} alignItems="center" sx={{ mt: 6 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 6, width: '100%' }}>
+                            <TablePagination
+                                component="div"
+                                count={totalCount}
+                                page={page - 1}
+                                onPageChange={handleTablePageChange}
+                                rowsPerPage={rowsPerPage}
+                                onRowsPerPageChange={handleChangeRowsPerPage}
+                                rowsPerPageOptions={[2, 10, 25, 50, 100]}
+                                ActionsComponent={() => null}
+                                labelDisplayedRows={() => null}
+                                sx={{
+                                    border: 'none',
+                                    '.MuiTablePagination-toolbar': { pl: 0 } // Remove default left padding
+                                }}
+                            />
                             <Pagination
                                 count={totalPages}
                                 page={page}
                                 onChange={handlePageChange}
                                 color="primary"
-                                size="large"
+                                shape="rounded"
+                                showFirstButton
+                                showLastButton
                             />
-                        </Stack>
+                        </Box>
                     )}
                 </>
             )}

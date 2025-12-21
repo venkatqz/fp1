@@ -1,13 +1,25 @@
 import { Router } from 'express';
 import * as HotelsController from '../controllers/hotels';
-import { authenticate } from '../middleware/auth';
+import * as ManagerController from '../controllers/manager';
+import { authenticate, authorize } from '../middleware/auth';
+import { UserRole as UserRoleEnum } from '../enums';
 
 const router = Router();
 
-router.get('/', HotelsController.getHotels);
+
 router.get('/search', HotelsController.searchAvailableHotels);
-router.get('/:id', HotelsController.getHotelById);
-router.post('/', authenticate, HotelsController.createHotel);
-router.put('/:id', authenticate, HotelsController.updateHotel);
+
+
+
+
+router.get('/my-hotels', authenticate, authorize([UserRoleEnum.HOTEL_MANAGER]), ManagerController.getMyHotels);
+router.get('/manager/bookings', authenticate, authorize([UserRoleEnum.HOTEL_MANAGER]), ManagerController.getBookings);
+
+router.post('/create', authenticate, authorize([UserRoleEnum.HOTEL_MANAGER]), ManagerController.saveHotel);
+router.post('/room-types', authenticate, authorize([UserRoleEnum.HOTEL_MANAGER]), ManagerController.saveRoomType);
+
+router.delete('/:id', authenticate, authorize([UserRoleEnum.HOTEL_MANAGER]), ManagerController.deleteHotel);
+router.delete('/room-types/:id', authenticate, authorize([UserRoleEnum.HOTEL_MANAGER]), ManagerController.deleteRoomType);
+
 
 export default router;

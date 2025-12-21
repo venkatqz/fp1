@@ -12,11 +12,7 @@ declare global {
     }
 }
 
-/**
- * Middleware to verify JWT Access Token
- * Checks Authorization header for "Bearer <token>"
- * Validates token against database to ensure it's still active/valid
- */
+
 export async function authenticate(req: Request, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
 
@@ -60,24 +56,23 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     }
 }
 
-/**
- * Middleware to authorize specific roles
- * Must be used AFTER authenticate middleware
- */
-// export function authorize(...roles: UserRole[]) {
-//     return (req: Request, res: Response, next: NextFunction) => {
-//         const user = (req as any).user as JWTPayload;
+export function authorize(allowedRoles: UserRole[]) {
+    return (req: Request, res: Response, next: NextFunction) => {
+        const user = (req as any).user as JWTPayload;
 
-//         if (!user) {
-//             return res.status(401).json({ message: 'User not authenticated' });
-//         }
+        if (!user) {
+            return res.status(401).json({ status: false, statusCode: 401, message: 'User not authenticated' });
+        }
 
-//         if (!roles.includes(user.role)) {
-//             return res.status(403).json({
-//                 message: `Forbidden: Requires one of roles [${roles.join(', ')}]`
-//             });
-//         }
+        if (!allowedRoles.includes(user.role)) {
+            return res.status(403).json({
+                status: false,
+                statusCode: 403,
+                message: `Access denied. Required role: ${allowedRoles.join(' or ')}`
+            });
+        }
 
-//         next();
-//     };
-// }
+        next();
+    };
+}
+
