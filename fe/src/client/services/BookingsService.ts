@@ -86,6 +86,32 @@ export class BookingsService {
         });
     }
     /**
+     * Cancel a Booking
+     * @param id
+     * @returns any Booking Cancelled
+     * @throws ApiError
+     */
+    public static cancelBooking(
+        id: string,
+    ): CancelablePromise<{
+        status?: boolean;
+        statusCode?: number;
+        message?: string;
+        data?: Booking;
+    }> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/bookings/{id}/cancel',
+            path: {
+                'id': id,
+            },
+            errors: {
+                400: `Invalid request`,
+                403: `Forbidden`,
+            },
+        });
+    }
+    /**
      * Get user's booking history
      * @returns any List of user bookings
      * @throws ApiError

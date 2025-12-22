@@ -43,22 +43,35 @@ export const RoomTypeRepository = {
         const { id, hotel_id, name, price, capacity, total_inventory, images, amenities } = data;
 
         return prisma.$transaction(async (tx) => {
-            // Atomic check: Insert only if the user manages the hotel
-            const result: any = await tx.$executeRaw`
-                INSERT INTO room_types (id, hotel_id, name, price, capacity, total_inventory, images)
-                SELECT ${id}, ${hotel_id}, ${name}, ${price}, ${capacity}, ${total_inventory}, ${images}
-                FROM hotel_managers 
+            // Check if user manages the hotel
+            const managers = await tx.$queryRaw`
+                SELECT * FROM hotel_managers 
                 WHERE hotel_id = ${hotel_id} AND user_id = ${userId} AND is_active = 1
-                LIMIT 1
             `;
 
-            const affected = Number(result);
+            if ((managers as any[]).length === 0) {
+                return 0; // Not authorized
+            }
 
-            if (affected > 0 && amenities) {
+            // Insert using Prisma create (safer/easier) instead of raw SQL for the Insert part
+            // since we already validated auth above
+            const newRoom = await tx.room_types.create({
+                data: {
+                    id: id,
+                    hotel_id: hotel_id,
+                    name: name,
+                    price: price,
+                    capacity: capacity,
+                    total_inventory: total_inventory,
+                    images: images
+                }
+            });
+
+            if (amenities) {
                 await upsertAmenities(tx, id, amenities);
             }
 
-            return affected;
+            return 1;
         });
     },
 

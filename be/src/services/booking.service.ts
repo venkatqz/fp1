@@ -181,5 +181,21 @@ export const BookingService = {
         });
     },
 
+    cancelBooking: async (bookingId: string) => {
+        return await prisma.$transaction(async (tx) => {
+            const booking = await BookingRepository.findById(bookingId, tx);
+            if (!booking) throw new Error('Booking not found');
+
+            // Allow cancellation if not already cancelled/completed
+            // Simplistic logic for now
+            if (booking.status === BookingStatus.CANCELLED) {
+                return booking;
+            }
+
+            const updated = await BookingRepository.updateStatus(bookingId, BookingStatus.CANCELLED, tx);
+            return updated;
+        });
+    }
+
 
 };

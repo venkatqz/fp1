@@ -14,7 +14,7 @@ import {
     UserRole,
     JWTPayload,
     RefreshTokenResponseDTO
-} from '../../apicontract';
+} from '../apicontract';
 
 // Helper to get role ID
 async function getRoleId(roleName: string): Promise<string> {

@@ -588,6 +588,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /bookings/{id}/cancel:
+    put:
+      summary: Cancel a Booking
+      security:
+        - bearerAuth: []
+      operationId: cancelBooking
+      tags: [Bookings]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: Booking Cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: boolean }
+                  statusCode: { type: integer }
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/Booking' }
+        400:
+          description: Invalid request
+        403:
+          description: Forbidden
+
   /bookings/my-bookings:
     get:
       summary: Get user's booking history

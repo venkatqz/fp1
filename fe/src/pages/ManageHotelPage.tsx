@@ -38,7 +38,6 @@ const ManageHotelPage: React.FC = () => {
                     address: hotel.data.address || '',
                     description: hotel.data.description || '',
                     lowestPrice: hotel.data.lowestPrice || '',
-                    rating: hotel.data.rating || '',
                     amenities: hotel.data.amenities?.map((a: any) => typeof a === 'string' ? a : a.name) || [],
                     images: hotel.data.images || []
                 };
@@ -109,6 +108,8 @@ const ManageHotelPage: React.FC = () => {
                     />
                 </>
             )}
+
+
         </Container>
     );
 };

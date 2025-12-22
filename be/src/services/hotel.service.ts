@@ -1,5 +1,5 @@
 import { HotelRepository } from '../repositories/hotel.repo';
-import { HotelDTO, SearchHotelRequestDTO, SearchHotelResponseDTO, toHotelDTO } from '../../apicontract';
+import { HotelDTO, SearchHotelRequestDTO, SearchHotelResponseDTO, toHotelDTO } from '../apicontract';
 
 export const HotelService = {
     searchHotels: async (params: SearchHotelRequestDTO): Promise<SearchHotelResponseDTO> => {
@@ -61,8 +61,11 @@ export const HotelService = {
         };
     },
 
+    getHotelById: async (id: string): Promise<HotelDTO | null> => {
+        const hotel = await HotelRepository.findById(id);
 
+        if (!hotel) return null;
 
-
+        return toHotelDTO(hotel);
+    }
 };
-

@@ -58,25 +58,19 @@ const BookedHotels: React.FC = () => {
         if (!selectedBooking) return;
 
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:3000/bookings/${selectedBooking.id}/cancel`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await BookingsService.cancelBooking(selectedBooking.id);
 
-            if (response.ok) {
+            if (response.status) {
                 // Update local state to reflect cancellation
                 setBookings(prev => prev.map(b =>
-                    b.id === selectedBooking.id ? { ...b, status: 'CANCELED' } : b
+                    b.id === selectedBooking.id ? { ...b, status: 'CANCELLED' } : b
                 ));
             } else {
-                alert('Failed to cancel booking');
+                alert(response.message || 'Failed to cancel booking');
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Cancel failed', err);
-            alert('Error canceling booking');
+            alert(err.message || 'Error canceling booking');
         } finally {
             setConfirmOpen(false);
             setSelectedBooking(null);
@@ -104,10 +98,10 @@ const BookedHotels: React.FC = () => {
                     <Grid item xs={12} md={6} lg={4} key={booking.id}>
                         <Card sx={{
                             borderRadius: 3,
-                            borderLeft: `6px solid ${booking.status === 'CANCELED' ? '#d32f2f' : '#FF8700'}`,
+                            borderLeft: `6px solid ${booking.status === 'CANCELLED' ? '#d32f2f' : '#FF8700'}`,
                             transition: 'transform 0.2s',
                             '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 },
-                            opacity: booking.status === 'CANCELED' ? 0.7 : 1
+                            opacity: booking.status === 'CANCELLED' ? 0.7 : 1
                         }}>
                             <CardContent>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -122,14 +116,14 @@ const BookedHotels: React.FC = () => {
 
                                     <Box>
                                         <Chip
-                                            icon={booking.status === 'CANCELED' ? <CancelIcon /> : <CheckCircleIcon />}
+                                            icon={booking.status === 'CANCELLED' ? <CancelIcon /> : <CheckCircleIcon />}
                                             label={booking.status}
                                             size="small"
-                                            color={booking.status === 'CANCELED' ? 'error' : 'success'}
+                                            color={booking.status === 'CANCELLED' ? 'error' : 'success'}
                                             variant="outlined"
                                             sx={{ mr: 1 }}
                                         />
-                                        {booking.status !== 'CANCELED' && (
+                                        {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
                                             <IconButton
                                                 size="small"
                                                 onClick={(e) => handleMenuOpen(e, booking)}
@@ -149,10 +143,10 @@ const BookedHotels: React.FC = () => {
 
                                 <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Typography variant="body2" color="text.secondary">
-                                        {booking.status === 'CANCELED' ? 'Refund Status' : 'Total Paid'}
+                                        {booking.status === 'CANCELLED' ? 'Refund Status' : 'Total Paid'}
                                     </Typography>
-                                    <Typography variant="h6" color={booking.status === 'CANCELED' ? 'text.disabled' : 'primary.main'} fontWeight="bold">
-                                        {booking.status === 'CANCELED' ? 'Refunded' : `₹${booking.totalPrice?.toLocaleString()}`}
+                                    <Typography variant="h6" color={booking.status === 'CANCELLED' ? 'text.disabled' : 'primary.main'} fontWeight="bold">
+                                        {booking.status === 'CANCELLED' ? 'Refund Initiated' : `₹${booking.totalPrice?.toLocaleString()}`}
                                     </Typography>
                                 </Box>
                             </CardContent>

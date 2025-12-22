@@ -171,4 +171,10 @@ export const BookingRepository = {
             ORDER BY b.check_in DESC
         `;
     },
+
+    updateStatus: async (id: string, status: string, tx: PrismaTransactionClient = prisma) => {
+        return tx.$executeRaw`
+            UPDATE bookings SET status = ${status} WHERE id = ${id}
+        `;
+    },
 };

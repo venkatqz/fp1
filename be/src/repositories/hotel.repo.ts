@@ -41,6 +41,60 @@ const upsertAmenities = async (tx: any, hotelId: string, amenities: string[]) =>
 export const HotelRepository = {
 
     //search
+    findById: async (id: string) => {
+        // Fetch Hotel basic details
+        const hotels: any[] = await prisma.$queryRaw`
+            SELECT id, name, city, address, description, rating, lowest_price, images
+            FROM hotels WHERE id = ${id}
+        `;
+
+        if (hotels.length === 0) return null;
+        const hotel = hotels[0];
+
+        // Fetch Amenities
+        const amenities: any[] = await prisma.$queryRaw`
+            SELECT a.name 
+            FROM hotel_amenities ha
+            JOIN amenities a ON ha.amenity_id = a.id
+            WHERE ha.hotel_id = ${id}
+        `;
+        hotel.amenities = amenities.map(a => a.name);
+
+        // Fetch Room Types
+        // Fetch Room Types using Prisma ORM to ensure type safety and correct parameter binding
+        const roomTypesRaw = await prisma.room_types.findMany({
+            where: { hotel_id: id }
+        });
+
+        // Map to match the expected structure if needed, or pass directly if schema matches
+        // Prisma returns fields as defined in schema: id, name, price, capacity, total_inventory, images
+        const roomTypes: any[] = roomTypesRaw.map(rt => ({
+            ...rt,
+            price: Number(rt.price), // Decimal to Number
+            // Ensure images is string if stored as string
+            images: rt.images,
+            hotelId: rt.hotel_id // Map snake_case to camelCase
+        }));
+
+
+
+        // Populate room amenities as needed or leave empty for now
+        for (const rt of roomTypes) {
+            const rtAmenities: any[] = await prisma.$queryRaw`
+                SELECT a.name 
+                FROM room_amenities ra
+                JOIN amenities a ON ra.amenity_id = a.id
+                WHERE ra.room_type_id = ${rt.id}
+            `;
+            rt.amenities = rtAmenities.map(a => a.name);
+            rt.hotelId = id; // Ensure needed fields for DTO
+        }
+
+        hotel.rooms = roomTypes;
+
+        return hotel;
+    },
+
     findAvailableHotels: async (
         searchTerm: string,
         checkInDate: string,

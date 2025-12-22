@@ -43,5 +43,5 @@ async function main() {
 }
 
 
-// Trigger restart (Optimized Manager Query)
+
 main();

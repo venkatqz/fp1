@@ -38,11 +38,11 @@ const RoomTypeManager: React.FC<RoomTypeManagerProps> = ({ hotelId, rooms, onUpd
     const [loading, setLoading] = useState(false);
     const [editingRoom, setEditingRoom] = useState<RoomType | null>(null);
 
-    const [formData, setFormData] = useState<Partial<RoomType>>({
+    const [formData, setFormData] = useState<any>({
         name: '',
-        price: 0,
-        capacity: 2,
-        totalInventory: 1,
+        price: '',
+        capacity: '',
+        totalInventory: '',
         images: [],
         amenities: []
     });
@@ -55,9 +55,9 @@ const RoomTypeManager: React.FC<RoomTypeManagerProps> = ({ hotelId, rooms, onUpd
             setEditingRoom(null);
             setFormData({
                 name: '',
-                price: 0,
-                capacity: 2,
-                totalInventory: 1,
+                price: '',
+                capacity: '',
+                totalInventory: '',
                 images: [],
                 amenities: []
             });
@@ -72,9 +72,11 @@ const RoomTypeManager: React.FC<RoomTypeManagerProps> = ({ hotelId, rooms, onUpd
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
             ...prev,
-            [name]: name === 'price' || name === 'capacity' || name === 'totalInventory' ? Number(value) : value
+            [name]: (name === 'price' || name === 'capacity' || name === 'totalInventory')
+                ? (value === '' ? '' : Number(value))
+                : value
         }));
     };
 
@@ -103,13 +105,23 @@ const RoomTypeManager: React.FC<RoomTypeManagerProps> = ({ hotelId, rooms, onUpd
         }
     };
 
-    const handleDelete = async (roomTypeId: string) => {
-        if (!window.confirm('Are you sure you want to delete this room type?')) return;
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+
+    const handleDeleteClick = (id: string) => {
+        setItemToDelete(id);
+        setConfirmOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!itemToDelete) return;
         try {
             setLoading(true);
-            await ManagerService.deleteRoomType(roomTypeId);
+            await ManagerService.deleteRoomType(itemToDelete);
             showToast({ type: 'success', msg: 'Room Type deleted' });
             onUpdate();
+            setConfirmOpen(false);
+            setItemToDelete(null);
         } catch (err: any) {
             console.error(err);
             showToast({ type: 'error', msg: err.message || 'Failed to delete room type' });
@@ -151,7 +163,7 @@ const RoomTypeManager: React.FC<RoomTypeManagerProps> = ({ hotelId, rooms, onUpd
                                     <IconButton size="small" onClick={() => handleOpen(room)}>
                                         <EditIcon fontSize="small" />
                                     </IconButton>
-                                    <IconButton size="small" color="error" onClick={() => handleDelete(room.id)}>
+                                    <IconButton size="small" color="error" onClick={() => handleDeleteClick(room.id)}>
                                         <DeleteIcon fontSize="small" />
                                     </IconButton>
                                 </TableCell>
@@ -212,13 +224,26 @@ const RoomTypeManager: React.FC<RoomTypeManagerProps> = ({ hotelId, rooms, onUpd
                                 onChange={handleChange}
                             />
                         </Grid>
-                        {/* Note: Amenities and Images fields can be added here similar to HotelForm */}
                     </Grid>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClose}>Cancel</Button>
                     <Button onClick={handleSubmit} variant="contained" disabled={loading}>
                         {loading ? <CircularProgress size={24} /> : 'Save'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+                <DialogTitle>Confirm Delete</DialogTitle>
+                <DialogContent>
+                    <Typography>Are you sure you want to delete this room type? This action cannot be undone.</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+                    <Button onClick={handleDeleteConfirm} color="error" variant="contained" disabled={loading}>
+                        {loading ? <CircularProgress size={24} /> : 'Delete'}
                     </Button>
                 </DialogActions>
             </Dialog>

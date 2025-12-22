@@ -93,8 +93,7 @@ const Navbar: React.FC = () => {
                         </Typography>
                     </Box>
 
-                    {/* 2. Composite Search Section (Centered) - Only visible when logged in */}
-                    {user && (
+                    {user && user.role !== 'HOTEL_MANAGER' && (
                         <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', maxWidth: '800px' }}>
                             <Box
                                 sx={{
@@ -207,7 +206,7 @@ const Navbar: React.FC = () => {
                                         {user.name || 'User'}
                                     </Typography>
                                     <IconButton size="small" edge="end" aria-label="user account">
-                                        <Avatar sx={{ bgcolor: theme.palette.secondary.main, width: 32, height: 32 }}>
+                                        <Avatar sx={{ bgcolor: 'orange', width: 32, height: 32 }}>
                                             {user.name?.charAt(0) || '?'}
                                         </Avatar>
                                     </IconButton>

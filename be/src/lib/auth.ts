@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { JWTPayload } from '../../apicontract';
+import { JWTPayload } from '../apicontract';
 
 // In production, these should be in environment variables
 const JWT_SECRET = (process.env.JWT_SECRET || 'dev_secret_key_123') as string;

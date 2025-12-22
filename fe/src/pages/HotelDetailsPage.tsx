@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     Container, Typography, Box, Grid, Card, CardMedia, Button, Chip, Divider,
-    CircularProgress, Alert, Paper
+    CircularProgress, Alert
 } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -110,7 +110,7 @@ const HotelDetailsPage: React.FC = () => {
     }, [id]);
 
     const handleSelectRoom = (room: any) => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) {
             navigate('/login', { state: { from: location.pathname } });
             return;

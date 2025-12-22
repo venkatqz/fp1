@@ -1,6 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { uiEvents } from '../services/ui-events';
-import type { ToastConfig } from '../services/ui-events';
+import React, { createContext, useContext, useState } from 'react';
+
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+export interface ToastConfig {
+    id?: string;
+    title?: string;
+    msg: string;
+    type: ToastType;
+    duration?: number;
+}
 
 interface UIContextType {
     isLoading: boolean;
@@ -17,31 +25,26 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const [isLoading, setIsLoading] = useState(false);
     const [toasts, setToasts] = useState<ToastConfig[]>([]);
 
-    useEffect(() => {
-        const unsubLoader = uiEvents.subscribeLoader((visible) => setIsLoading(visible));
-        const unsubToast = uiEvents.subscribeToast((newToast) => {
-            setToasts(prev => [...prev, newToast]);
-            if (newToast.duration) {
-                setTimeout(() => {
-                    removeToast(newToast.id!);
-                }, newToast.duration);
-            }
-        });
-
-        return () => {
-            unsubLoader();
-            unsubToast();
-        };
-    }, []);
-
     const removeToast = (id: string) => {
         setToasts(prev => prev.filter(t => t.id !== id));
     };
 
-    // Proxies to the        (so components can use context OR service directly)
-    const showLoader = () => uiEvents.showLoader();
-    const hideLoader = () => uiEvents.hideLoader();
-    const showToast = (config: ToastConfig) => uiEvents.showToast(config);
+    const showLoader = () => setIsLoading(true);
+    const hideLoader = () => setIsLoading(false);
+
+    const showToast = (config: ToastConfig) => {
+        const id = config.id || Math.random().toString(36).substring(7);
+        const duration = config.duration || 5000;
+        const newToast = { ...config, id, duration };
+
+        setToasts(prev => [...prev, newToast]);
+
+        if (duration) {
+            setTimeout(() => {
+                removeToast(id);
+            }, duration);
+        }
+    };
 
     return (
         <UIContext.Provider value={{ isLoading, toasts, showLoader, hideLoader, showToast, removeToast }}>

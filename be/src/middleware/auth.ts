@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../lib/auth';
-import { JWTPayload, UserRole } from '../../apicontract';
+import { JWTPayload, UserRole } from '../apicontract';
 import prisma from '../lib/prisma';
 
 // Extend Express Request interface to include user

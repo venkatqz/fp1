@@ -1,4 +1,4 @@
-import { components, paths } from './src/types/api-contract';
+import { components, paths } from './types/api-contract';
 
 // Helper to extract schema types
 type Schema<T extends keyof components['schemas']> = components['schemas'][T];
@@ -18,9 +18,11 @@ export type Amenity = Schema<'Amenity'>;
 // --- Request DTOs (Extracted from operations) ---
 export type RegisterRequestDTO = paths['/auth/register']['post']['requestBody']['content']['application/json'];
 export type LoginRequestDTO = paths['/auth/login']['post']['requestBody']['content']['application/json'];
-export type SearchHotelRequestDTO = NonNullable<paths['/hotels']['get']['parameters']['query']>;
+// /hotels doesn't exist, use /hotels/search params instead or custom type
+export type SearchHotelRequestDTO = NonNullable<paths['/hotels/search']['get']['parameters']['query']>;
 export type SearchAvailableHotelRequestDTO = NonNullable<paths['/hotels/search']['get']['parameters']['query']>;
-export type EarlyAccessRequestDTO = paths['/early-access-users']['post']['requestBody']['content']['application/json'];
+// /early-access-users removed
+export type EarlyAccessRequestDTO = any;
 
 // Helper types not strictly in OpenAPI but used in app
 export interface RefreshTokenRequestDTO {
@@ -74,20 +76,38 @@ export function toHotelDTO(hotel: any): HotelDTO {
         description: hotel.description,
         rating: typeof hotel.rating === 'object' && hotel.rating !== null ? Number(hotel.rating) : Number(hotel.rating || 0), // Handle Decimal from Prisma
         lowestPrice: typeof hotel.lowest_price === 'object' && hotel.lowest_price !== null ? Number(hotel.lowest_price) : Number(hotel.lowest_price || 0),
-        images: hotel.images ? JSON.parse(hotel.images) : [],
-        amenities: hotel.hotel_amenities ? hotel.hotel_amenities.map((ha: any) => ({
+
+        // Handle images
+        images: typeof hotel.images === 'string' ? JSON.parse(hotel.images) : (hotel.images || []),
+
+        // Handle Amenities
+        amenities: hotel.amenities ? hotel.amenities : (hotel.hotel_amenities ? hotel.hotel_amenities.map((ha: any) => ({
             id: ha.amenities.id,
             name: ha.amenities.name,
             scopeId: ha.amenities.scope_id
-        })) : [],
-        rooms: hotel.room_types ? hotel.room_types.map((rt: any) => ({
+        })) : []),
+
+        // Handle Rooms: Support both relation-mapped (room_types) and pre-mapped (rooms)
+        rooms: Array.isArray(hotel.rooms) ? hotel.rooms.map((rt: any) => ({
             id: rt.id,
+            hotelId: rt.hotelId || rt.hotel_id || hotel.id, // Robust fallback
             name: rt.name,
             price: Number(rt.price),
-            capacity: { adults: rt.capacity, children: 0 }, // Using capacity for adults, children hardcoded 0 for now
-            available: rt.total_inventory, // Should calculate real availability, but for Details view static is okay for now or fetched via separate inventory check
-            amenities: rt.room_amenities?.map((ra: any) => ra.amenities?.name) || []
-        })) : []
+            capacity: Number(rt.capacity),
+            totalInventory: Number(rt.total_inventory),
+            available: Number(rt.total_inventory),
+            amenities: rt.amenities || [],
+            images: rt.images ? (typeof rt.images === 'string' ? JSON.parse(rt.images) : rt.images) : []
+        })) : (Array.isArray(hotel.room_types) ? hotel.room_types.map((rt: any) => ({
+            id: rt.id,
+            hotelId: hotel.id,
+            name: rt.name,
+            price: Number(rt.price),
+            capacity: Number(rt.capacity),
+            totalInventory: Number(rt.total_inventory),
+            available: Number(rt.total_inventory),
+            amenities: rt.room_amenities?.map((ra: any) => ra.amenities?.name) || [],
+            images: rt.images ? (typeof rt.images === 'string' ? JSON.parse(rt.images) : rt.images) : []
+        })) : [])
     };
 }
-

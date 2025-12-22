@@ -102,9 +102,9 @@ export const ManagerService = {
         if (data.images && Array.isArray(data.images)) {
             data.images = JSON.stringify(data.images);
         }
-        if (data.totalInventory) data.total_inventory = Number(data.totalInventory);
-        if (data.capacity) data.capacity = Number(data.capacity);
-        if (data.price) data.price = Number(data.price);
+        if (data.totalInventory !== undefined) data.total_inventory = Number(data.totalInventory);
+        if (data.capacity !== undefined) data.capacity = Number(data.capacity);
+        if (data.price !== undefined) data.price = Number(data.price);
 
         const affected = await RoomTypeRepository.update(roomTypeId, userId, data);
         if (affected === 0) {

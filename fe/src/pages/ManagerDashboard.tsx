@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Container,
     Typography,
@@ -53,7 +53,7 @@ function CustomTabPanel(props: TabPanelProps) {
 
 export default function ManagerDashboard() {
     const navigate = useNavigate();
-    const { user, isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
     const { showLoader, hideLoader, showToast } = useUI();
     const [tabValue, setTabValue] = useState(0);
 
@@ -63,7 +63,7 @@ export default function ManagerDashboard() {
     const [error, setError] = useState('');
 
     // Prevent infinite loops
-    const hasShownAuthError = useRef(false);
+
 
     const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
@@ -78,13 +78,7 @@ export default function ManagerDashboard() {
             }
         } catch (err: any) {
             console.error('Fetch hotels error:', err);
-            if ((err.status === 401 || err.status === 403) && !hasShownAuthError.current) {
-                hasShownAuthError.current = true;
-                showToast({ type: 'error', msg: 'Please login as a manager' });
-                setTimeout(() => navigate('/login'), 1000);
-            } else if (err.status !== 401 && err.status !== 403) {
-                setError('Failed to fetch hotels');
-            }
+            handleAuthError(err);
         } finally {
             setLoading(false);
         }
@@ -99,15 +93,18 @@ export default function ManagerDashboard() {
             }
         } catch (err: any) {
             console.error('Fetch bookings error:', err);
-            if ((err.status === 401 || err.status === 403) && !hasShownAuthError.current) {
-                hasShownAuthError.current = true;
-                showToast({ type: 'error', msg: 'Please login as a manager' });
-                setTimeout(() => navigate('/login'), 1000);
-            } else if (err.status !== 401 && err.status !== 403) {
-                setError('Failed to fetch bookings');
-            }
+            handleAuthError(err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAuthError = (err: any) => {
+        // Global handler in App.tsx will catch the 401/403 event dispatch from request.ts
+        // We just need to ensure we don't show duplicate errors here
+        if (err.status !== 401 && err.status !== 403) {
+            console.error('API Error:', err);
+            setError('Failed to fetch data');
         }
     };
 

@@ -20,7 +20,6 @@ export interface HotelFormData {
     address: string;
     description: string;
     lowestPrice: number | ''; // Allow empty string for controlled input
-    rating: number | '';      // Allow empty string for controlled input
     amenities: string[];
     images: string[];
 }
@@ -38,7 +37,6 @@ const DEFAULT_FORM_DATA: HotelFormData = {
     address: '',
     description: '',
     lowestPrice: '', // Start empty
-    rating: '',      // Start empty
     amenities: ['Wifi'],
     images: ['https://via.placeholder.com/600x400'],
 };
@@ -79,7 +77,6 @@ const HotelForm: React.FC<HotelFormProps> = ({ initialData, onSubmit, isLoading 
         else if (!formData.city) newErrors.city = 'City is required';
 
         if (formData.lowestPrice === '' || Number(formData.lowestPrice) < 0) newErrors.lowestPrice = 'Valid price is required';
-        if (formData.rating === '' || Number(formData.rating) < 0 || Number(formData.rating) > 5) newErrors.rating = 'Rating must be between 0 and 5';
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -142,8 +139,7 @@ const HotelForm: React.FC<HotelFormProps> = ({ initialData, onSubmit, isLoading 
             const submissionData = {
                 ...formData,
                 city: formData.city === 'Other' ? customCity : formData.city,
-                lowestPrice: Number(formData.lowestPrice),
-                rating: Number(formData.rating)
+                lowestPrice: Number(formData.lowestPrice)
             };
             onSubmit(submissionData as HotelFormData);
         }
@@ -239,20 +235,7 @@ const HotelForm: React.FC<HotelFormProps> = ({ initialData, onSubmit, isLoading 
                         />
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
-                        <TextField
-                            fullWidth
-                            type="number"
-                            label="Rating (0-5)"
-                            name="rating"
-                            value={formData.rating}
-                            onChange={handleChange}
-                            required
-                            error={!!errors.rating}
-                            helperText={errors.rating}
-                            InputProps={{ inputProps: { min: 0, max: 5, step: 0.1 } }}
-                        />
-                    </Grid>
+
 
                     {/* Amenities */}
                     <Grid item xs={12}>

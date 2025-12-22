@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { BookingService } from '../services/booking.service';
-import { ApiResponse } from '../../apicontract';
+import { ApiResponse } from '../apicontract';
 
 export const createBookingIntent = async (req: Request, res: Response) => {
     try {
@@ -47,5 +47,24 @@ export const confirmBooking = async (req: Request, res: Response) => {
             return res.status(400).json({ status: false, statusCode: 400, message: error.message });
         }
         res.status(500).json({ status: false, statusCode: 500, message: 'Internal server error' });
+    }
+};
+
+export const cancelBooking = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ status: false, statusCode: 400, message: 'Booking ID is required' });
+        }
+        const result = await BookingService.cancelBooking(id);
+
+        res.json({
+            status: true,
+            statusCode: 200,
+            message: 'Booking cancelled successfully',
+            data: result
+        });
+    } catch (error: any) {
+        res.status(500).json({ status: false, statusCode: 500, message: error.message || 'Error cancelling booking' });
     }
 };

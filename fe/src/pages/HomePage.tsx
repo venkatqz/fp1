@@ -8,16 +8,21 @@ const HomePage: React.FC = () => {
     const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
+        const storedUser = sessionStorage.getItem('user');
         if (storedUser && storedUser !== "undefined") {
             try {
-                setUser(JSON.parse(storedUser));
+                const u = JSON.parse(storedUser);
+                setUser(u);
+                // Redirect manager to dashboard immediately if they land here
+                if (u.role === 'HOTEL_MANAGER') {
+                    navigate('/manager/dashboard', { replace: true });
+                }
             } catch (e) {
-                console.error("Failed to parse user from local storage", e);
-                localStorage.removeItem('user'); // Clean up corrupt data
+                console.error("Failed to parse user from session storage", e);
+                sessionStorage.removeItem('user'); // Clean up corrupt data
             }
         }
-    }, []);
+    }, [navigate]);
 
     return (
         <Box
@@ -45,7 +50,7 @@ const HomePage: React.FC = () => {
                     </Button>
                 </Box>
 
-                {/* Show Bookings if User is Logged In */}
+
                 {user && (
                     <Box sx={{ mt: 8, p: 4, bgcolor: 'white', borderRadius: 4, boxShadow: '0px 4px 20px rgba(0,0,0,0.05)' }}>
                         <BookedHotels />

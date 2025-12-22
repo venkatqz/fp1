@@ -1,11 +1,13 @@
+
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import {
-    LoginRequestDTO,
     RegisterRequestDTO,
-    RefreshTokenRequestDTO,
-    ApiResponse
-} from '../../apicontract';
+    LoginRequestDTO,
+    AuthResponseDTO,
+    ApiResponse,
+    JWTPayload
+} from '../apicontract';
 
 export const register = async (req: Request, res: Response) => {
     try {

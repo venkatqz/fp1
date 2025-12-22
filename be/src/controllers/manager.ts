@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ApiResponse } from '../../apicontract';
+import { ApiResponse } from '../apicontract';
 import { ManagerService } from '../services/manager.service';
 
 export const getMyHotels = async (req: Request, res: Response) => {

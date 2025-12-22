@@ -256,9 +256,23 @@ export const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): 
         403: 'Forbidden',
         404: 'Not Found',
         500: 'Internal Server Error',
-        502: 'Bad Gateway',
         503: 'Service Unavailable',
         ...options.errors,
+    }
+
+    // --- Global 401/403 Handling ---
+    if (result.status === 401 || result.status === 403) {
+        // Dispatch custom event for UI handling (redirect/toast)
+        // Check window to ensure we are in a browser environment
+        if (typeof window !== 'undefined') {
+            const event = new CustomEvent('auth:unauthorized', {
+                detail: {
+                    status: result.status,
+                    message: (result.body as any)?.message || 'Session expired'
+                }
+            });
+            window.dispatchEvent(event);
+        }
     }
 
     const error = errors[result.status];
