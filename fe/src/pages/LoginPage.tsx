@@ -71,89 +71,116 @@ const LoginPage: React.FC = () => {
     };
 
     return (
-        <Container component="main" maxWidth="xs" sx={{ height: '80vh', display: 'flex', alignItems: 'center' }}>
-            <Paper
-                elevation={6}
-                sx={{
-                    p: 4,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    borderRadius: 3,
-                    width: '100%',
-                    background: 'linear-gradient(to bottom right, #ffffff, #f8f9fa)'
-                }}
-            >
-                <Box sx={{
-                    m: 1,
-                    bgcolor: 'secondary.main',
-                    color: 'white',
-                    p: 1.5,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: 2
-                }}>
-                    <LockOutlinedIcon />
-                </Box>
-
-                <Typography component="h1" variant="h5" fontWeight="bold" sx={{ mt: 1 }}>
-                    Sign in
+        <>
+            {/* Brand Header */}
+            <Box sx={{
+                textAlign: 'center',
+                pt: 4,
+                pb: 2
+            }}>
+                <Typography
+                    variant="h3"
+                    component="a"
+                    href="/"
+                    sx={{
+                        fontFamily: 'Inter',
+                        fontWeight: 800,
+                        letterSpacing: '-.05rem',
+                        color: 'primary.main',
+                        textDecoration: 'none',
+                        '&:hover': {
+                            opacity: 0.8
+                        }
+                    }}
+                >
+                    HotelRent
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    to continue your booking
-                </Typography>
+            </Box>
 
-                {from && (
-                    <Alert severity="info" sx={{ width: '100%', mb: 2 }}>
-                        Please login to continue your reservation.
-                    </Alert>
-                )}
-
-                <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-                    <TextField
-                        margin="normal"
-                        required
-                        fullWidth
-                        id="email"
-                        label="Email Address"
-                        name="email"
-                        autoComplete="email"
-                        autoFocus
-                        value={formData.email}
-                        onChange={handleChange}
-                    />
-                    <TextField
-                        margin="normal"
-                        required
-                        fullWidth
-                        name="password"
-                        label="Password"
-                        type="password"
-                        id="password"
-                        autoComplete="current-password"
-                        value={formData.password}
-                        onChange={handleChange}
-                    />
-                    <Button
-                        type="submit"
-                        fullWidth
-                        variant="contained"
-                        color="secondary"
-                        size="large"
-                        sx={{ mt: 3, mb: 2, py: 1.5, fontWeight: 'bold' }}
-                    >
-                        Sign In
-                    </Button>
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                        <MuiLink component={Link} to="/register" variant="body2" color="primary" fontWeight="medium">
-                            {"Don't have an account? Sign Up"}
-                        </MuiLink>
+            <Container component="main" maxWidth="xs" sx={{ height: '80vh', display: 'flex', alignItems: 'center' }}>
+                <Paper
+                    elevation={6}
+                    sx={{
+                        p: 4,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        borderRadius: 3,
+                        width: '100%',
+                        background: 'linear-gradient(to bottom right, #ffffff, #f8f9fa)'
+                    }}
+                >
+                    <Box sx={{
+                        m: 1,
+                        bgcolor: 'secondary.main',
+                        color: 'white',
+                        p: 1.5,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: 2
+                    }}>
+                        <LockOutlinedIcon />
                     </Box>
-                </Box>
-            </Paper>
-        </Container>
+
+                    <Typography component="h1" variant="h5" fontWeight="bold" sx={{ mt: 1 }}>
+                        Sign in
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        to continue your booking
+                    </Typography>
+
+                    {from && (
+                        <Alert severity="info" sx={{ width: '100%', mb: 2 }}>
+                            Please login to continue your reservation.
+                        </Alert>
+                    )}
+
+                    <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            id="email"
+                            label="Email Address"
+                            name="email"
+                            autoComplete="email"
+                            autoFocus
+                            value={formData.email}
+                            onChange={handleChange}
+                        />
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            name="password"
+                            label="Password"
+                            type="password"
+                            id="password"
+                            autoComplete="current-password"
+                            value={formData.password}
+                            onChange={handleChange}
+                        />
+                        <Button
+                            type="submit"
+                            fullWidth
+                            variant="contained"
+                            color="secondary"
+                            size="large"
+                            sx={{ mt: 3, mb: 2, py: 1.5, fontWeight: 'bold' }}
+                        >
+                            Sign In
+                        </Button>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                            <MuiLink component={Link} to="/register" variant="body2" color="primary" fontWeight="medium">
+                                {"Don't have an account? Sign Up"}
+                            </MuiLink>
+                        </Box>
+                    </Box>
+                </Paper>
+            </Container>
+        </>
     );
 };
 

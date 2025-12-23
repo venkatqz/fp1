@@ -15,10 +15,14 @@ import {
     TableRow,
     Chip,
     CircularProgress,
-    Alert
+    Alert,
+    ToggleButtonGroup,
+    ToggleButton
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import ViewListIcon from '@mui/icons-material/ViewList';
 import HotelList from '../components/HotelList';
 import { ManagerService } from '../client/services/ManagerService';
 import { useUI } from '../context/UIContext';
@@ -56,6 +60,7 @@ export default function ManagerDashboard() {
     const { isAuthenticated } = useAuth();
     const { showLoader, hideLoader, showToast } = useUI();
     const [tabValue, setTabValue] = useState(0);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     const [hotels, setHotels] = useState<Hotel[]>([]);
     const [bookings, setBookings] = useState<any[]>([]);
@@ -160,13 +165,29 @@ export default function ManagerDashboard() {
                 </Typography>
 
                 {tabValue === 0 && (
-                    <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={() => navigate('/admin/hotel/new')}
-                    >
-                        Add New Hotel
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                        <ToggleButtonGroup
+                            value={viewMode}
+                            exclusive
+                            onChange={(_, newMode) => newMode && setViewMode(newMode)}
+                            size="small"
+                            aria-label="view mode"
+                        >
+                            <ToggleButton value="grid" aria-label="grid view">
+                                <ViewModuleIcon />
+                            </ToggleButton>
+                            <ToggleButton value="list" aria-label="list view">
+                                <ViewListIcon />
+                            </ToggleButton>
+                        </ToggleButtonGroup>
+                        <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            onClick={() => navigate('/admin/hotel/new')}
+                        >
+                            Add New Hotel
+                        </Button>
+                    </Box>
                 )}
             </Box>
 
@@ -185,7 +206,7 @@ export default function ManagerDashboard() {
                         ) : (
                             <HotelList
                                 hotels={hotels as any}
-                                viewMode="list"
+                                viewMode={viewMode}
                                 isManager={true}
                                 onEdit={handleEditHotel}
                                 onDelete={handleDeleteHotel}

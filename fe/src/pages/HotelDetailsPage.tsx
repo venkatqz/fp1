@@ -3,10 +3,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     Container, Typography, Box, Grid, Card, CardMedia, Button, Chip, Divider,
-    CircularProgress, Alert
+    CircularProgress, Alert, IconButton
 } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
 import WifiIcon from '@mui/icons-material/Wifi';
 import PoolIcon from '@mui/icons-material/Pool';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
@@ -38,8 +40,10 @@ const HotelDetailsPage: React.FC = () => {
     const [loading, setLoading] = useState(!location.state?.hotel);
     const [error, setError] = useState('');
 
+    // Room quantity selections - Shopping cart style
+    const [roomQuantities, setRoomQuantities] = useState<Record<string, number>>({});
+
     // Booking State
-    const [selectedRoom, setSelectedRoom] = useState<any>(null);
     const [openBooking, setOpenBooking] = useState(false);
 
     useEffect(() => {
@@ -61,17 +65,24 @@ const HotelDetailsPage: React.FC = () => {
                     }
 
                     return {
-                        id: rd.room_name || `room-${index}`,
+                        id: rd.room_type_id || rd.id || `room-${index}`,  // Use actual room_type_id
                         name: rd.room_name,
                         price: rd.price,
                         amenities: Array.isArray(roomAmenities) ? roomAmenities : [],
                         available: rd.available_rooms,
-                        capacity: { adults: 2, children: 1 }, // Default
+                        capacity: rd.capacity || 0,
                         totalInventory: 0
                     };
                 });
                 updatedHotel.rooms = mappedRooms;
                 needsUpdate = true;
+
+                // Initialize room quantities to 0
+                const initialQuantities: Record<string, number> = {};
+                mappedRooms.forEach((room: any) => {
+                    initialQuantities[room.id] = 0;
+                });
+                setRoomQuantities(initialQuantities);
             }
 
             // 2. Map 'hotel_amenities' (CSV string) to 'amenities' (Object Array)
@@ -109,13 +120,32 @@ const HotelDetailsPage: React.FC = () => {
         fetchDetails();
     }, [id]);
 
-    const handleSelectRoom = (room: any) => {
+    // Room quantity handler - unified function with delta parameter
+    const handleQuantityChange = (roomId: string, delta: number, maxAvailable: number) => {
+        setRoomQuantities(prev => {
+            const currentQty = prev[roomId] || 0;
+            const newQty = currentQty + delta;
+            return {
+                ...prev,
+                [roomId]: Math.max(0, Math.min(newQty, maxAvailable))
+            };
+        });
+    };
+
+    // Calculate total selected rooms
+    const totalSelectedRooms = Object.values(roomQuantities).reduce((sum, qty) => sum + qty, 0);
+
+    const handleOpenBooking = () => {
+        if (totalSelectedRooms === 0) {
+            alert('Please select at least one room');
+            return;
+        }
+
         const token = sessionStorage.getItem('token');
         if (!token) {
             navigate('/login', { state: { from: location.pathname } });
             return;
         }
-        setSelectedRoom(room);
         setOpenBooking(true);
     };
 
@@ -209,8 +239,8 @@ const HotelDetailsPage: React.FC = () => {
                     <Box sx={{ mb: 4 }}>
                         <Typography variant="h5" fontWeight="bold" gutterBottom>Amenities</Typography>
                         <Grid container spacing={2} sx={{ mt: 1 }}>
-                            {hotel.amenities?.map((amenity: any) => (
-                                <Grid item key={amenity.id} xs={6} sm={4}>
+                            {hotel.amenities?.map((amenity: any, idx: number) => (
+                                <Grid item key={amenity.id || `amenity-${idx}`} xs={6} sm={4}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'text.secondary' }}>
                                         {getAmenityIcon(amenity.name)}
                                         <Typography variant="body2">{amenity.name}</Typography>
@@ -238,15 +268,15 @@ const HotelDetailsPage: React.FC = () => {
                                     <Typography variant="h6" fontWeight="bold">{room.name}</Typography>
                                     <Box sx={{ display: 'flex', gap: 2, mt: 1, mb: 2 }}>
                                         <Typography variant="body2" color="text.secondary">
-                                            Capacity: {room.capacity?.adults} Adults, {room.capacity?.children} Children
+                                            Capacity: {room.capacity} guest{room.capacity > 1 ? 's' : ''}
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
                                             {room.available} rooms left
                                         </Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                        {room.amenities?.map((am: string) => (
-                                            <Chip key={am} label={am} size="small" variant="outlined" />
+                                        {room.amenities?.map((am: string, idx: number) => (
+                                            <Chip key={`${room.id}-amenity-${idx}`} label={am} size="small" variant="outlined" />
                                         ))}
                                     </Box>
                                 </Box>
@@ -262,17 +292,44 @@ const HotelDetailsPage: React.FC = () => {
                                     pl: { sm: 3 }
                                 }}>
                                     <Typography variant="h5" color="primary" fontWeight="bold">₹{room.price}</Typography>
-                                    <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>+ taxes & fees</Typography>
-                                    <Button
-                                        variant="contained"
-                                        size="large"
-                                        fullWidth
-                                        disabled={room.available === 0}
-                                        onClick={() => handleSelectRoom(room)}
-                                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 'bold' }}
-                                    >
-                                        {room.available === 0 ? 'Sold Out' : 'Select Room'}
-                                    </Button>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>per night</Typography>
+
+                                    {room.available > 0 ? (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleQuantityChange(room.id, -1, room.available)}
+                                                disabled={!roomQuantities[room.id] || roomQuantities[room.id] === 0}
+                                            >
+                                                <RemoveIcon />
+                                            </IconButton>
+                                            <Typography sx={{
+                                                minWidth: 40,
+                                                textAlign: 'center',
+                                                fontWeight: 'bold',
+                                                fontSize: '1.2rem',
+                                                color: roomQuantities[room.id] > 0 ? 'primary.main' : 'text.secondary'
+                                            }}>
+                                                {roomQuantities[room.id] || 0}
+                                            </Typography>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleQuantityChange(room.id, +1, room.available)}
+                                                disabled={roomQuantities[room.id] >= room.available}
+                                                color="primary"
+                                            >
+                                                <AddIcon />
+                                            </IconButton>
+                                        </Box>
+                                    ) : (
+                                        <Typography variant="body2" color="error">
+                                            Sold Out
+                                        </Typography>
+                                    )}
+
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                                        {room.available} available
+                                    </Typography>
                                 </Box>
                             </Card>
                         </Grid>
@@ -281,18 +338,56 @@ const HotelDetailsPage: React.FC = () => {
                         <Typography variant="body1" color="text.secondary">No rooms available.</Typography>
                     )}
                 </Grid>
+
+                {/* Book Now Button - Shows selected rooms */}
+                <Box sx={{ mt: 4, textAlign: 'center' }}>
+                    <Button
+                        variant="contained"
+                        size="large"
+                        onClick={handleOpenBooking}
+                        disabled={totalSelectedRooms === 0}
+                        sx={{
+                            minWidth: 300,
+                            py: 1.5,
+                            fontSize: '1.1rem',
+                            fontWeight: 'bold',
+                            borderRadius: 2
+                        }}
+                    >
+                        {totalSelectedRooms > 0
+                            ? `Book Now (${totalSelectedRooms} room${totalSelectedRooms > 1 ? 's' : ''})`
+                            : 'Select Rooms to Continue'}
+                    </Button>
+                </Box>
             </Box>
 
-            {/* Cleaned up Booking Logic */}
+            {/* Updated Booking Dialog - Now receives room quantities */}
             <BookingDialog
                 open={openBooking}
                 onClose={() => setOpenBooking(false)}
                 hotel={hotel}
-                selectedRoom={selectedRoom}
-                onSuccess={() => {
-                    // Refresh hotel data to update availability?
-                    // Fetch details again or just close
+                availableRooms={hotel.rooms || []}
+                roomQuantities={roomQuantities}
+                onSuccess={async () => {
                     setOpenBooking(false);
+                    // Reset quantities after successful booking
+                    const resetQuantities: Record<string, number> = {};
+                    hotel.rooms?.forEach((room: any) => {
+                        resetQuantities[room.id] = 0;
+                    });
+                    setRoomQuantities(resetQuantities);
+
+                    // Refresh hotel data to show updated availability
+                    if (id) {
+                        try {
+                            const response = await CustomerService.getHotelById(id);
+                            if (response.data) {
+                                setHotel(response.data);
+                            }
+                        } catch (err) {
+                            console.error('Failed to refresh hotel data:', err);
+                        }
+                    }
                 }}
             />
 

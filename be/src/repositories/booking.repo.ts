@@ -14,6 +14,9 @@ export const BookingRepository = {
         tx: PrismaTransactionClient = prisma
     ) => {
 
+        const confirmedStatus = BookingStatus.CONFIRMED;
+        const pendingStatus = BookingStatus.PENDING_PAYMENT;
+
         const result: any[] = await tx.$queryRaw`
             SELECT COALESCE(SUM(br.quantity), 0) as total
             FROM booking_rooms br
@@ -22,8 +25,8 @@ export const BookingRepository = {
               AND b.check_in < ${checkOut}
               AND b.check_out > ${checkIn}
               AND (
-                  b.status = '${BookingStatus.CONFIRMED}' 
-                  OR (b.status = '${BookingStatus.PENDING_PAYMENT}' AND b.expires_at > NOW())
+                  b.status = ${confirmedStatus}
+                  OR (b.status = ${pendingStatus} AND b.expires_at > NOW())
               )
         `;
 

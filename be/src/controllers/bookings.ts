@@ -68,3 +68,32 @@ export const cancelBooking = async (req: Request, res: Response) => {
         res.status(500).json({ status: false, statusCode: 500, message: error.message || 'Error cancelling booking' });
     }
 };
+
+export const getUserBookings = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                status: false,
+                statusCode: 401,
+                message: 'Unauthorized'
+            });
+        }
+
+        const bookings = await BookingService.getUserBookings(userId);
+
+        res.json({
+            status: true,
+            statusCode: 200,
+            message: 'Bookings retrieved successfully',
+            data: bookings
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            status: false,
+            statusCode: 500,
+            message: error.message || 'Error fetching bookings'
+        });
+    }
+};

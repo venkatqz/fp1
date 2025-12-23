@@ -195,7 +195,54 @@ export const BookingService = {
             const updated = await BookingRepository.updateStatus(bookingId, BookingStatus.CANCELLED, tx);
             return updated;
         });
-    }
+    },
 
+    getUserBookings: async (userId: string) => {
+        const bookings = await prisma.bookings.findMany({
+            where: { user_id: userId },
+            include: {
+                hotels: {
+                    select: {
+                        id: true,
+                        name: true,
+                        city: true,
+                        address: true,
+                        images: true
+                    }
+                },
+                booking_rooms: {
+                    include: {
+                        room_types: {
+                            select: {
+                                name: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Transform data to match frontend expectations
+        return bookings.map(booking => {
+            // Extract room names from booking_rooms
+            const roomNames = booking.booking_rooms
+                .map(br => {
+                    const roomName = br.room_types.name;
+                    return br.quantity > 1 ? `${roomName} (${br.quantity}x)` : roomName;
+                })
+                .join(', ');
+
+            return {
+                id: booking.id,
+                hotelName: booking.hotels?.name || 'Unknown Hotel',
+                roomName: roomNames || 'Room',
+                checkIn: booking.check_in?.toISOString().split('T')[0],
+                checkOut: booking.check_out?.toISOString().split('T')[0],
+                totalPrice: Number(booking.total_price),
+                status: booking.status,
+                hotel: booking.hotels
+            };
+        });
+    }
 
 };

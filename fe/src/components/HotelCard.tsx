@@ -21,9 +21,19 @@ interface HotelCardProps {
 const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
     const navigate = useNavigate();
 
+    // Parse images if they're stored as JSON string
+    let images = hotel.images;
+    if (typeof images === 'string') {
+        try {
+            images = JSON.parse(images);
+        } catch (e) {
+            images = [];
+        }
+    }
+
     // Fallback image if empty
-    const mainImage = (hotel.images && hotel.images.length > 0)
-        ? hotel.images[0]
+    const mainImage = (images && Array.isArray(images) && images.length > 0)
+        ? images[0]
         : 'https://placehold.co/600x400?text=No+Image';
 
     return (
@@ -57,8 +67,9 @@ const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
                     image={mainImage}
                     alt={hotel.name}
                 />
+
                 {/* Top Rated Badge - only if rating >= 4.5 */}
-                {(hotel.rating ?? 0) >= 4.5 && (
+                {(hotel.rating ?? 0) >= 4.5 ? (
                     <Box
                         sx={{
                             position: 'absolute',
@@ -75,9 +86,10 @@ const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
                     >
                         Top Rated
                     </Box>
-                )}
+                ) : null}
+
                 {/* Rating Badge Overlay */}
-                {hotel.rating && (
+                {hotel.rating && hotel.rating > 0 ? (
                     <Box sx={{
                         position: 'absolute',
                         bottom: 16,
@@ -97,7 +109,7 @@ const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
                     }}>
                         ★ {hotel.rating}
                     </Box>
-                )}
+                ) : null}
             </Box>
 
             {/* 2. Hotel Details */}
@@ -121,25 +133,30 @@ const HotelCard: React.FC<HotelCardProps> = ({ hotel }) => {
                         {hotel.description || "Experience luxury and comfort at its finest."}
                     </Typography>
 
-                    {hotel.amenities && (
+                    {hotel.amenities && Array.isArray(hotel.amenities) && hotel.amenities.length > 0 ? (
                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 'auto' }}>
-                            {hotel.amenities.slice(0, 3).map((amenity) => (
-                                <Chip
-                                    key={amenity.id}
-                                    label={amenity.name}
-                                    size="small"
-                                    sx={{
-                                        borderRadius: 1,
-                                        bgcolor: 'primary.50',
-                                        color: 'primary.main',
-                                        fontWeight: 600,
-                                        border: 'none',
-                                        height: 24
-                                    }}
-                                />
-                            ))}
+                            {hotel.amenities.slice(0, 3).map((amenity: any, index: number) => {
+                                const amenityLabel = typeof amenity === 'string' ? amenity : amenity.name;
+                                const amenityKey = typeof amenity === 'string' ? index : amenity.id;
+
+                                return (
+                                    <Chip
+                                        key={amenityKey}
+                                        label={amenityLabel}
+                                        size="small"
+                                        sx={{
+                                            borderRadius: 1,
+                                            bgcolor: 'primary.50',
+                                            color: 'primary.main',
+                                            fontWeight: 600,
+                                            border: 'none',
+                                            height: 24
+                                        }}
+                                    />
+                                );
+                            })}
                         </Stack>
-                    )}
+                    ) : null}
                 </CardContent>
 
                 {/* 3. Footer / Price */}

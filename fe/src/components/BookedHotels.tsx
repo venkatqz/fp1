@@ -101,9 +101,16 @@ const BookedHotels: React.FC = () => {
                             borderLeft: `6px solid ${booking.status === 'CANCELLED' ? '#d32f2f' : '#FF8700'}`,
                             transition: 'transform 0.2s',
                             '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 },
-                            opacity: booking.status === 'CANCELLED' ? 0.7 : 1
+                            opacity: booking.status === 'CANCELLED' ? 0.7 : 1,
+                            minHeight: 220,  // ✅ Uniform height
+                            display: 'flex',
+                            flexDirection: 'column'
                         }}>
-                            <CardContent>
+                            <CardContent sx={{
+                                flex: 1,
+                                display: 'flex',
+                                flexDirection: 'column'
+                            }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                                     <Box>
                                         <Typography variant="h6" fontWeight="bold">
@@ -114,14 +121,13 @@ const BookedHotels: React.FC = () => {
                                         </Typography>
                                     </Box>
 
-                                    <Box>
+                                    <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 0.5 }}>
                                         <Chip
                                             icon={booking.status === 'CANCELLED' ? <CancelIcon /> : <CheckCircleIcon />}
                                             label={booking.status}
                                             size="small"
                                             color={booking.status === 'CANCELLED' ? 'error' : 'success'}
                                             variant="outlined"
-                                            sx={{ mr: 1 }}
                                         />
                                         {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
                                             <IconButton
@@ -140,6 +146,9 @@ const BookedHotels: React.FC = () => {
                                         {booking.checkIn} — {booking.checkOut}
                                     </Typography>
                                 </Box>
+
+                                {/* Spacer to push Total Paid to bottom */}
+                                <Box sx={{ flexGrow: 1 }} />
 
                                 <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Typography variant="body2" color="text.secondary">

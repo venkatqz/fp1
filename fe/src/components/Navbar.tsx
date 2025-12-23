@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     AppBar,
     Toolbar,
@@ -29,6 +29,7 @@ import { useUI } from '../context/UIContext';
 const Navbar: React.FC = () => {
     const theme = useTheme();
     const navigate = useNavigate();
+    const location = useLocation();
 
     // --- State for Search ---
     const { user, logout } = useAuth();
@@ -66,6 +67,11 @@ const Navbar: React.FC = () => {
         handleMenuClose();
         navigate('/login');
     };
+
+    // Hide navbar on login and register pages (AFTER all hooks)
+    if (location.pathname === '/login' || location.pathname === '/register') {
+        return null;
+    }
 
     return (
         <AppBar position="sticky" color="default" elevation={1}>

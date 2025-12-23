@@ -13,8 +13,12 @@ import {
     MenuItem,
     FormControl,
     InputLabel,
+    ToggleButtonGroup,
+    ToggleButton,
     type SelectChangeEvent,
 } from '@mui/material';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import ViewListIcon from '@mui/icons-material/ViewList';
 import HotelList from '../components/HotelList';
 import { CustomerService, ApiError } from '../client';
 import type { Hotel } from '../client/models/Hotel';
@@ -31,6 +35,7 @@ export default function SearchPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     // Read URL params
     const search = searchParams.get('search') || '';
@@ -130,25 +135,42 @@ export default function SearchPage() {
                     {queryParam ? `Results for "${queryParam}"` : 'All Hotels'}
                 </Typography>
 
-                <Box sx={{ minWidth: 200 }}>
-                    <FormControl fullWidth size="small">
-                        <InputLabel id="sort-by-label">Sort By</InputLabel>
-                        <Select
-                            labelId="sort-by-label"
-                            id="sort-by-select"
-                            value={sortBy || 'rating'}
-                            label="Sort By"
-                            onChange={(e: SelectChangeEvent) => {
-                                const newParams = new URLSearchParams(searchParams);
-                                newParams.set('sortBy', e.target.value as string);
-                                setSearchParams(newParams);
-                            }}
-                        >
-                            <MenuItem value="rating">Rating</MenuItem>
-                            <MenuItem value="price_low">Price: Low to High</MenuItem>
-                            <MenuItem value="price_high">Price: High to Low</MenuItem>
-                        </Select>
-                    </FormControl>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <ToggleButtonGroup
+                        value={viewMode}
+                        exclusive
+                        onChange={(_, newMode) => newMode && setViewMode(newMode)}
+                        size="small"
+                        aria-label="view mode"
+                    >
+                        <ToggleButton value="grid" aria-label="grid view">
+                            <ViewModuleIcon />
+                        </ToggleButton>
+                        <ToggleButton value="list" aria-label="list view">
+                            <ViewListIcon />
+                        </ToggleButton>
+                    </ToggleButtonGroup>
+
+                    <Box sx={{ minWidth: 200 }}>
+                        <FormControl fullWidth size="small">
+                            <InputLabel id="sort-by-label">Sort By</InputLabel>
+                            <Select
+                                labelId="sort-by-label"
+                                id="sort-by-select"
+                                value={sortBy || 'rating'}
+                                label="Sort By"
+                                onChange={(e: SelectChangeEvent) => {
+                                    const newParams = new URLSearchParams(searchParams);
+                                    newParams.set('sortBy', e.target.value as string);
+                                    setSearchParams(newParams);
+                                }}
+                            >
+                                <MenuItem value="rating">Rating</MenuItem>
+                                <MenuItem value="price_low">Price: Low to High</MenuItem>
+                                <MenuItem value="price_high">Price: High to Low</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Box>
                 </Box>
             </Box>
 
@@ -176,8 +198,8 @@ export default function SearchPage() {
             {/* Loading State Removed - Using GlobalLoader */}
             {!authError && (
                 <>
-                    {/* Results Grid - Now Reusable! */}
-                    <HotelList hotels={hotels} viewMode="grid" />
+                    {/* Results Grid/List - Now with view toggle! */}
+                    <HotelList hotels={hotels} viewMode={viewMode} />
 
 
                     {/* Empty State */}
@@ -200,10 +222,7 @@ export default function SearchPage() {
                                 rowsPerPageOptions={[2, 10, 25, 50, 100]}
                                 ActionsComponent={() => null}
                                 labelDisplayedRows={() => null}
-                                sx={{
-                                    border: 'none',
-                                    '.MuiTablePagination-toolbar': { pl: 0 } // Remove default left padding
-                                }}
+
                             />
                             <Pagination
                                 count={totalPages}

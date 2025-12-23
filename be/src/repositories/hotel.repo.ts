@@ -142,14 +142,29 @@ export const HotelRepository = {
             RoomAvailabilityCTE AS (
                 SELECT 
                     rt.id as room_type_id,
-                    (rt.total_inventory - COALESCE(SUM(br.quantity), 0)) as available_count
+                    rt.total_inventory,
+                    COALESCE(SUM(CASE 
+                        WHEN b.id IS NOT NULL 
+                            AND b.check_in < ${checkOutDate}
+                            AND b.check_out > ${checkInDate}
+                            AND (b.status = 'CONFIRMED' OR (b.status = 'PENDING_PAYMENT' AND b.expires_at > NOW()))
+                        THEN br.quantity 
+                        ELSE 0 
+                    END), 0) as booked_quantity
                 FROM room_types rt
                 LEFT JOIN booking_rooms br ON rt.id = br.room_type_id
                 LEFT JOIN bookings b ON br.booking_id = b.id
-                    AND b.check_in < ${checkOutDate} 
-                    AND b.check_out > ${checkInDate} 
-                    AND (b.status = 'CONFIRMED' OR (b.status = 'PENDING_PAYMENT' AND b.expires_at > NOW()))
-                GROUP BY rt.id
+                WHERE rt.hotel_id IN (
+                    SELECT id FROM hotels 
+                    WHERE city LIKE ${search} OR address LIKE ${search} OR name LIKE ${search}
+                )
+                GROUP BY rt.id, rt.total_inventory
+            ),
+            FinalAvailability AS (
+                SELECT 
+                    room_type_id,
+                    (total_inventory - booked_quantity) as available_count
+                FROM RoomAvailabilityCTE
             )
 
             SELECT 
@@ -157,8 +172,10 @@ export const HotelRepository = {
                 MIN(rt.price) as starting_price,
                 JSON_ARRAYAGG( 
                     JSON_OBJECT(
+                        'room_type_id', rt.id,
                         'room_name', rt.name,
                         'price', rt.price,
+                        'capacity', rt.capacity,
                         'amenities', COALESCE(ra.amenity_list, '[]'),
                         'available_rooms', COALESCE(av.available_count, rt.total_inventory)
                     )
@@ -170,7 +187,7 @@ export const HotelRepository = {
             LEFT JOIN RoomAmenitiesCTE as ra ON rt.id = ra.room_type_id
             LEFT JOIN HotelAmenitiesCTE ha ON h.id = ha.hotel_id
             LEFT JOIN HotelManagersCTE hm ON h.id = hm.hotel_id
-            LEFT JOIN RoomAvailabilityCTE AS av ON rt.id = av.room_type_id
+            LEFT JOIN FinalAvailability AS av ON rt.id = av.room_type_id
             WHERE (h.city LIKE ${search} OR h.address LIKE ${search} OR h.name LIKE ${search})
             GROUP BY h.id
             HAVING MAX(COALESCE(av.available_count, rt.total_inventory)) >= 1
